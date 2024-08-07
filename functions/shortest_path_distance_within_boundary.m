@@ -23,18 +23,18 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
     
     % Plot the shortest path distance map if pltFlag is true
     if pltFlag
-        figure;
-        imagesc(xMesh_crop(1,:), yMesh_crop(:,1), sMap);
-        hold on;
-        plot(xApex, yApex, 'r.', 'MarkerSize', 6);
-        contour(xMesh_crop, yMesh_crop, sMap, 'k');
-        axis xy;
-        axis equal;
-        axis tight;
-        colorbar;
-        title('Shortest Path Distance Map');
-        xlabel('X Coordinates');
-        ylabel('Y Coordinates');
+        figure
+        imagesc(xMesh_crop(1,:), yMesh_crop(:,1), sMap)
+        hold on
+        plot(xApex, yApex, 'r.', 'MarkerSize', 6)
+        contour(xMesh_crop, yMesh_crop, sMap, 'k')
+        axis xy
+        axis equal
+        axis tight
+        colorbar
+        title('Shortest Path Distance Map')
+        xlabel('X Coordinates')
+        ylabel('Y Coordinates')
     end
 
 end
