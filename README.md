@@ -9,7 +9,7 @@ This project focuses on the inverse approach, which extracts the elevation-dista
 - [Installation](#installation)
 - [Usage](#usage)
 - [Example Commands](#example-commands)
-- [Cite This](#cite-this)
+- [How to Cite](#how-to-cite)
 - [Reference](#reference)
 
 
