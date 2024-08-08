@@ -127,12 +127,29 @@ fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bi
   - `zTopo`: Reconstructed topography of the alluvial fan.
 
 
-## Cite This
+## How to Cite
 
-If you use this project in your research or work, please cite it as follows:
+If you use this project in your research or work, please give us credit by citing it with the following BibTeX entries:
 
+### Inverse method: extracting the distance-elevation relationship
 ```
 Chiu, Y.H. & Capart, H. (In process). *Inverse Computational Morphology of Confined Debris and Alluvial Fans Using the Visibility Polygon*. Retrieved from [https://github.com/damiel-hub/geometric-alluvial-fan].
+```
+### Forward method: simulating fan topography
+
+```bibtex
+@article{chenComputationalMorphologyDebris2022,
+title = {Computational morphology of debris and alluvial fans on irregular terrain using the visibility polygon},
+journal = {Computers & Geosciences},
+volume = {169},
+pages = {105228},
+year = {2022},
+issn = {0098-3004},
+doi = {https://doi.org/10.1016/j.cageo.2022.105228},
+url = {https://www.sciencedirect.com/science/article/pii/S0098300422001777},
+author = {Tzu-Yin Kasha Chen and Hervé Capart},
+keywords = {Morphology, Debris flow, Alluvial fan, Surface of revolution, Eikonal equation, Visibility polygon}
+}
 ```
 
 
