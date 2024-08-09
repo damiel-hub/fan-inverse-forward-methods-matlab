@@ -46,7 +46,9 @@ function fitting_s_z = process_s_z_relationship(sMap, zMap, bin_size, ds, outlen
         plot(dd_do, z_do, 'b--');
         plot([0 dd_max], z_in([1 end]), 'bo', 'MarkerSize', 6);
         axis padded
-        daspect([10 1 1])
+        daspect([5 1 1])
+        grid on
+        box on
         end
         ss = [dd_up dd_in dd_do];
         zz = [z_up z_in z_do];

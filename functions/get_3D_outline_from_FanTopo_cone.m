@@ -1,4 +1,4 @@
-function poly_xyz_all = get_3D_outline_from_FanTopo_slope_bd_cone(xyzkApex,xyzVisi,tanAlpha)
+function poly_xyz_all = get_3D_outline_from_FanTopo_cone(xyzkApex,xyzVisi,tanAlpha)
 
 warning('off', 'all');
 polyUnion = polyshape(xyzVisi{1}(:,1),xyzVisi{1}(:,2));

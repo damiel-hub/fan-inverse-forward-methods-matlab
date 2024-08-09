@@ -1,20 +1,25 @@
 path(path,'functions')
 path(path,'functions\inpoly-master')
 
+%% Set data path name
+topo_pre_event = 'data\topo_PuTunPuNas_min_before2014_riverbed2014.tif';
+topo_post_event = 'data\topo_PuTunPuNas_2014.tif';
+shape_fan_boundary = 'data\shape\PT2014.shp';
+
 %% Inverse method: Extract the fan profile from the field data
 % Step 1: Calculate shortest path distance within or along boundary
-[xMesh_post, yMesh_post, zMesh_post] = readGeoTiff('data\topo_fan.tif');
-[xMesh_post_crop, yMesh_post_crop, zMesh_post_crop] = clipGeoTiff('data\topo_fan.tif', 'data\shape\fan_extent.shp');
+[xMesh, yMesh, zMesh_post] = readGeoTiff(topo_post_event);
+[xMesh_crop, yMesh_crop, zMesh_post_crop] = clipGeoTiff(topo_post_event, shape_fan_boundary);
 
 % Within boundary
-sMap = shortest_path_distance_within_boundary(xMesh_post_crop, yMesh_post_crop, zMesh_post_crop, 0);
+sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop, 0);
 
 % Along boundary
-xysBoundary = shortest_path_distance_along_boundary(xMesh_post_crop, yMesh_post_crop, zMesh_post_crop);
-zBoundary = interp2(xMesh_post, yMesh_post, zMesh_post, xysBoundary(:,1), xysBoundary(:,2));
+xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop);
+zBoundary = interp2(xMesh, yMesh, zMesh_post, xysBoundary(:,1), xysBoundary(:,2));
 
 %% Step 2: fitting with quadratic elevation-distance relationship
-bin_size = 10;
+bin_size = 100;
 ds = 5;
 outlength = 500;
 
@@ -33,29 +38,22 @@ fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundar
 %% Forward method: Reconstruct the debris and alluvial fan topography using the elevation-distance profile
 
 % Read initial topography
-[xMesh_pre, yMesh_pre, zMesh_pre] = readGeoTiff('data\topo_initial.tif');
+[xMesh, yMesh, zMesh_pre] = readGeoTiff(topo_pre_event);
+[~, ~, zMesh_pre_crop] = clipGeoTiff(topo_pre_event, shape_fan_boundary);
+
+% Calculate fan volume
+fanSimVolume = sum(zMesh_post_crop - zMesh_pre_crop, 'all', 'omitnan') * (xMesh_crop(1,2) - xMesh_crop(1,1)).^2;
 
 % Use the highest point in the boundary as apex location
 [zApex, iApex] = max(zMesh_post_crop(:));
-xApex = xMesh_post_crop(iApex);
-yApex = yMesh_post_crop(iApex);
+xApex = xMesh_crop(iApex);
+yApex = yMesh_crop(iApex);
 
+guessHeightAboveGround_top = 10;
+guessHeightAboveGround_bottom = 5;
+
+tic
 % Reconstruct the topography
-[zTopo, ~, ~, ~, ~, ~] = reconstruct_fan_surface(xMesh_pre, yMesh_pre, zMesh_pre, xApex, yApex, zApex, 'caseName', 'myProfile','dz_interpM', {fitting_s_z_within_boundary});
-
-zMap = zTopo;
-zMap(isnan(zMap)) = zMesh_pre(isnan(zMap));
-
-% Plot the result
-figure
-pcolor(xMesh_pre, yMesh_pre, zTopo - zMesh_pre)
-shading flat
-axis equal
-axis tight
-hold on
-contour(xMesh_pre, yMesh_pre, zMap, 50, 'k')
-clim([0 max(zTopo - zMesh_pre,[],"all")])
-c = colorbar;
-ylabel(c,'\Delta z (m)')
-xlabel('Easting (m)')
-ylabel('Northing (m)')
+[zTopo_sim, heightAG_Volume_All] = reconstruct_fan_surface(xMesh, yMesh, zMesh_pre, xApex, yApex, fanSimVolume, guessHeightAboveGround_top, guessHeightAboveGround_bottom, fitting_s_z_within_boundary,"fanBoundarySHP",shape_fan_boundary);
+plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex)
+toc

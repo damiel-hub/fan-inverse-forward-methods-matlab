@@ -16,11 +16,11 @@ function xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_c
     zApex_s = diagonal_length * 10;
     
     % Calculate visibility polygon and apex information
-    [~,~,xyzkApexAll,xyzVisPolygon,~,~] = reconstruct_fan_surface(xMesh_crop, yMesh_crop, wallMesh, xApex, yApex, zApex_s, ...
+    [~,~,xyzkApexAll,xyzVisPolygon,~,~] = FanTopo(xMesh_crop, yMesh_crop, wallMesh, xApex, yApex, zApex_s, ...
                                                            'tanAlphaM', 1, 'saveVisPolygon', 1);
 
     % Extract 3D outline from the visibility polygon and apex information
-    poly_xyz_all = get_3D_outline_from_FanTopo_slope_bd_cone(xyzkApexAll, xyzVisPolygon, 1);
+    poly_xyz_all = get_3D_outline_from_FanTopo_cone(xyzkApexAll, xyzVisPolygon, 1);
     
     % Initialize the boundary array
     xysBoundary = [];
@@ -28,7 +28,7 @@ function xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_c
     % Calculate the shortest path distance along the boundary
     for i = 1:length(poly_xyz_all)
         sOutline = zApex_s - poly_xyz_all{i}(:,3);
-        xysBoundary = [xysBoundary; poly_xyz_all{i}(:,1:2), sOutline];
+        xysBoundary = [xysBoundary; poly_xyz_all{i}(:,1:2), sOutline;nan nan nan];
     end
     
     
