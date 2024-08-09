@@ -41,7 +41,7 @@ xApex = xMesh_post_crop(iApex);
 yApex = yMesh_post_crop(iApex);
 
 % Reconstruct the topography
-[zTopo, ~, ~, ~, ~, ~] = FanTopo_slope_bd(xMesh_pre, yMesh_pre, zMesh_pre, xApex, yApex, zApex, 'caseName', 'myProfile','dz_interpM', {fitting_s_z_within_boundary});
+[zTopo, ~, ~, ~, ~, ~] = reconstruct_fan_surface(xMesh_pre, yMesh_pre, zMesh_pre, xApex, yApex, zApex, 'caseName', 'myProfile','dz_interpM', {fitting_s_z_within_boundary});
 
 zMap = zTopo;
 zMap(isnan(zMap)) = zMesh_pre(isnan(zMap));

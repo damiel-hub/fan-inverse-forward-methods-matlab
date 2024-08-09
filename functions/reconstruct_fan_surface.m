@@ -1,8 +1,8 @@
-function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = FanTopo_slope_bd(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
+function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = reconstruct_fan_surface(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
 %FANTOPO_SLOPE constructs the constant-slope or concave fan morphology, the apexes
 %positions, and source provenance
 
-% >> [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = FanTopo_slope_bd(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
+% >> [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = reconstruct_fan_surface(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
 
 % Inputs:
 % xMesh - 2D matrix of x-coordinates for mesh grid points.
