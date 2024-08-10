@@ -38,8 +38,6 @@ heights = [guessHeightAboveGround_bottom, guessHeightAboveGround_top];
 minMaxInitialGuessHeightVolume = zeros(2, 2);
 
 
-
-
 parfor i = 1:2
     guessHeight = heights(i);
     zApex = interp2(xMesh, yMesh, zMesh, xApex, yApex) + guessHeight;

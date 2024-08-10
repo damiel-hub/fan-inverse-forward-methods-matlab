@@ -47,9 +47,9 @@ ylabel('Elevation, z (m)')
 
 % Along boundary
 figure
-plot(xysBoundary(:,3), zBoundary, 'k.-');
+plot(xysBoundary(:,3), zBoundary, 'k-');
 hold on
-fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1);
+fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
 xlabel('Shortest distance on boundary of polygon, s (m)')
 ylabel('Elevation, z (m)')
 %% Forward method: Reconstruct the debris and alluvial fan topography using the elevation-distance profile
@@ -77,4 +77,7 @@ guessHeightAboveGround_top = 10;
 plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex)
 % Plot the result (calculate volume within within given boundary)
 plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex, shape_fan_boundary)
+% Plot the field elevation difference before and after event
+plotFanTopoResults(xMesh, yMesh, zMesh_post, zMesh_pre, xApex, yApex, shape_fan_boundary)
+
 toc

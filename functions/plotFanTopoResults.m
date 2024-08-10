@@ -12,18 +12,11 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     zTopoFill = zTopo;
     zTopoFill(isnan(zTopo)) = zMesh(isnan(zTopo));
 
-    % Calculate difference between zTopo and zMesh
-    zDiff = zTopo - zMesh;
-
     % Plotting
     figure
     lightterrain2D_imagesc(xMesh, yMesh, zTopoFill)
     hold on
     freezeColors
-
-    % Plot color difference map
-    pcolor(xMesh, yMesh, zDiff)
-    shading flat
 
     if ~isnan(fanBoundarySHP)
         % Read fan boundary shapefile
@@ -31,21 +24,28 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
         fan_boundary_x = fan_boundary.X(1:end-1);
         fan_boundary_y = fan_boundary.Y(1:end-1);
         volumeCalculateExtentXY = [fan_boundary_x', fan_boundary_y'];
-    
-        % Plot volume calculation extent if provided
-        plot(volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2), 'r-')
-
         inMask = inpolygon(xMesh,yMesh,volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2));
     else
         inMask = true(size(zTopo));
     end
 
-    dzMesh = zTopo - zMesh;
-    dzMesh(~inMask) = nan;
-    % Calculate fan volume
-    fanVolume = sum(dzMesh, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
+    % Calculate difference between zTopo and zMesh
+    zDiff = zTopo - zMesh;
+    zDiff(~inMask) = nan;
 
+    % Plot color difference map
+    pcolor(xMesh, yMesh, zDiff)
+    shading flat
     colormap("turbo")
+
+    % Calculate fan volume
+    fanVolume = sum(zDiff, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
+
+    if ~isnan(fanBoundarySHP)
+        % Plot volume calculation extent if provided
+        plot(volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2), 'r-')
+    end
+    
     % Plot apex point
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
 

@@ -9,6 +9,7 @@ This project focuses on the inverse approach, which extracts the elevation-dista
 - [Installation](#installation)
 - [Usage](#usage)
 - [Example Commands](#example-commands)
+- [More Functions and Examples](#more-functions-and-examples)
 - [How to Cite](#how-to-cite)
 - [Reference](#reference)
 
@@ -20,16 +21,16 @@ This project focuses on the inverse approach, which extracts the elevation-dista
 Before you begin, ensure you have the following:
 
 - **MATLAB** (version R2021a or later recommended)
-- **Required Toolbox**: Mapping Toolbox
+- **Required Toolbox**: Mapping Toolbox, Parallel Computing Toolbox
 
 ### Installing Additional Dependencies
 
 1. Download the `inpoly` function from [GitHub](https://github.com/dengwirda/inpoly).
-2. Extract the ZIP file and place the `inpoly-master` folder in your project directory.
-3. Add the `inpoly-master` folder to your MATLAB path using the following command:
+2. Extract the ZIP file and move the `inpoly-master` folder into the `functions\` directory of this project.
+3. Add the `inpoly-master` folder to your MATLAB path by running the following command:
 
     ```matlab
-    addpath(genpath('path_to_your_project/inpoly-master'))
+    addpath(genpath('functions/inpoly-master'))
     ```
 
 ## Usage
@@ -47,7 +48,7 @@ To use this project, follow these steps:
     ```
 
 The demo script includes:
-- Loading example data files: `"topo_fan.tif"` (alluvial fan terrain), `"fan_extent.shp"` (fan boundary polygon shapefile), and `"topo_initial.tif"` (initial terrain).
+- Loading example GeoTiff data files: `topo_post_event` (alluvial fan terrain), `shape_fan_boundary` (fan boundary polygon shapefile), and `topo_pre_event` (initial terrain).
 - Clipping the alluvial fan topography using the boundary polygon.
 - Mapping shortest path distances within and along the boundary.
 - Applying median filtering and quadratic fitting to the elevation-distance relationship.
@@ -58,11 +59,11 @@ The demo script includes:
 **Clip the Fan Topography:**
 
 ```matlab
-[xMesh_post_crop, yMesh_post_crop, zMesh_post_crop] = clipGeoTiff('data/topo_fan.tif', 'data/shape/fan_extent.shp');
+[xMesh_crop, yMesh_crop, zMesh_post_crop] = clipGeoTiff(topo_post_event, shape_fan_boundary);
 ```
 - Input: 
-  - `'data/topo_fan.tif'`: Path to the GeoTIFF file containing the alluvial fan topography.
-  - `'data/shape/fan_extent.shp'`: Path to the shapefile defining the boundary of the fan.
+  - `topo_post_event`: Path to the GeoTIFF file containing the alluvial fan topography.
+  - `shape_fan_boundary`: Path to the shapefile defining the boundary of the fan.
 - Output:
   - `xMesh_post_crop`: X mesh coordinates of the clipped alluvial fan topography.
   - `yMesh_post_crop`: Y mesh coordinates of the clipped alluvial fan topography.
@@ -73,11 +74,11 @@ The demo script includes:
 **Map the Shortest Path Distance Within the Boundary:**
 
 ```matlab
-sMap = shortest_path_distance_within_boundary(xMesh_post_crop, yMesh_post_crop, zMesh_post_crop, 0);
+sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop, 1);
 ```
 
 - **Inputs:**
-  - `xMesh_post_crop`, `yMesh_post_crop`, `zMesh_post_crop`: Clipped mesh coordinates from the previous step.
+  - `xMesh_crop`, `yMesh_crop`, `zMesh_post_crop`: Clipped mesh coordinates from the previous step.
   - `0` or `1`: Specifies whether to plot the shortest path results. Use `0` to skip plotting and `1` to display the plot.
 - **Outputs:**
   - `sMap`: A 2D matrix of shortest path distances within the boundary of the alluvial fan.
@@ -85,46 +86,106 @@ sMap = shortest_path_distance_within_boundary(xMesh_post_crop, yMesh_post_crop, 
 **Map the Shortest Path Distance Along the Boundary:**
 
 ```matlab
-xysBoundary = shortest_path_distance_along_boundary(xMesh_post_crop, yMesh_post_crop, zMesh_post_crop);
+xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop);
 ```
 
 - **Inputs:**
-  - `xMesh_post_crop`, `yMesh_post_crop`, `zMesh_post_crop`: Clipped mesh coordinates from the previous step.
+  - `xMesh_crop`, `yMesh_crop`, `zMesh_post_crop`: Clipped mesh coordinates from the previous step.
 
 - **Outputs:**
   - `xysBoundary`: An `n × 3` matrix with X and Y coordinates of the boundary in the first two columns, and shortest path distances in the third column.
 
+
 **Median Filtering and Quadratic Fitting:**
 
 ```matlab
+% With median filter applied
 fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bin_size, ds, outlength, 1);
+
+% Without median filter
+fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
 ```
 
 - **Inputs:**
-  - `sMap`: A 2D matrix of shortest path distances within the boundary.
-  - `zMesh_post_crop`: Elevation values of the clipped fan topography.
-  - `bin_size`: Size of the bins used for filtering.
+  - `sMap` and `xysBoundary(:,3)`: 2D matrix or 1D vector representing shortest path distances.
+  - `zMesh_post_crop` and `zBoundary`: Elevation values of the fan topography correspoding to the previous parameter.
+  - `bin_size`: Size of bins for filtering useless when without median filter.
   - `ds`: Sampling distance.
-  - `outlength`: The length of the straight line fitting beyond the fan toe and apex.
-  - `0` or `1`: Indicates whether to plot the median filter and fitting result. Use `0` to skip plotting and `1` to show the plot.
+  - `outlength`: Length of the straight-line fitting beyond the fan toe and apex.
+  - `0` or `1`: Controls plotting. Use `0` to skip the plot, `1` to display it.
+  - `'medianFilter'`: Controls median filtering. Use `0` to disable, `1` or omit to enable.
 
 - **Outputs:**
-  - `fitting_s_z_within_boundary`: Processed elevation-distance relationship fitted with a quadratic function.
+  - `fitting_s_z_within_boundary` and `fitting_s_z_along_boundary`: Processed elevation-distance relationships fitted with a quadratic function.
+
+
 
 **Reconstruct the Fan Using the Forward Method:**
 
 ```matlab
-[zTopo, ~, ~, ~, ~, ~] = FanTopo_slope_bd(xMesh_pre, yMesh_pre, zMesh_pre, xApex, yApex, zApex, 'caseName', 'myProfile', 'dz_interpM', {fitting_s_z_within_boundary});
+[zTopo_sim, heightAG_Volume_All] = reconstruct_fan_surface(xMesh, yMesh, zMesh_pre, xApex, yApex, fanSimVolume, guessHeightAboveGround_top, guessHeightAboveGround_bottom, fitting_s_z_within_boundary, "fanBoundarySHP", shape_fan_boundary);
 ```
 
 - **Inputs:**
-  - `xMesh_pre`, `yMesh_pre`, `zMesh_pre`: Initial mesh coordinates and elevation data of the fan before reconstruction.
-  - `xApex`, `yApex`, `zApex`: Coordinates of the fan’s apex.
-  - `'caseName'`: Identifier for the case, such as `'cone'`, `'concave'`, `'infinite'`, or `'myProfile'`.
-  - `'dz_interpM'`: A cell array containing the distance-elevation relationships `{fitting_s_z_within_boundary, ...}` for different fan apexes.
+  - `xMesh`, `yMesh`, `zMesh_pre`: Mesh grid coordinates (`xMesh`, `yMesh`) and initial elevation data (`zMesh_pre`).
+  - `xApex`, `yApex`: Coordinates of the fan's apex point.
+  - `fanSimVolume`: Expected volume of the simulated fan.
+  - `guessHeightAboveGround_top`: Initial estimate of the apex height above ground for the upper boundary.
+  - `guessHeightAboveGround_bottom`: Initial estimate of the apex height above ground for the lower boundary.
+  - `fitting_s_z_within_boundary`: 2D array representing the distance-elevation relationships obtained in the previous step.
+  - `"fanBoundarySHP"`: (string) A name-value pair where `"fanBoundarySHP"` specifies the boundary shapefile `shape_fan_boundary` for volume calculation. Default is `nan`.
+  - `"tol"`: (scalar) Tolerance for the difference between the expected volume ($V_e$) and the simulated volume ($V_s$). The simulaiton stops when the condition $\text{abs}(V_s - V_e) / V_e \leq \text{tol}$ is met. Default is `0.03`.
+  - `"debug"`: (boolean) If set to `1`, saves two guessed fan topographies as GeoTIFF files. Default is `0`.
+  - `"epgs_code"`: (scalar) The EPSG code to use when saving GeoTIFF files. This is only applicable if `"debug"` is set to `1`. Default is `3826`.
 
 - **Outputs:**
   - `zTopo`: Reconstructed topography of the alluvial fan.
+  - `heightAG_Volume_All`: 2D array containing the apex height above ground and the corresponding calculated fan volume for each iteration.
+
+
+## More Functions and Examples
+
+**Fan topography simulation (Forward method)**
+
+```matlab
+[zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = FanTopo(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
+```
+- **Inputs:**
+  - `xMesh`, `yMesh`, `zMesh`: Mesh grid coordinates (`xMesh`, `yMesh`) and the initial elevation data (`zMesh`).
+
+  - `xApexM`, `yApexM`, `zApexM`: Vectors containing the coordinates (`xApexM`, `yApexM`) and elevation (`zApexM`) of the apexes for multiple fans, allowing for the simultaneous simulation of multiple fan surfaces.
+
+
+
+  - **`options`**: A structure containing optional parameters that customize the fan morphology and simulation process. The fields in `options` depend on the chosen `caseName` and can include the following:
+
+    - **`caseName`**: (string) Specifies the type of fan morphology to generate. Possible values include:
+      - **`'cone'`**: Generates a conical fan shape.
+        - **`tanAlphaM`**: (vector) Defines the slope angles (tangents) for each apex, which determine the steepness of the fan.
+      - **`'concave'`**: Generates a concave-shaped fan.
+        - **`tanAlphaM`**: (vector) Defines the slope angles (tangents) for each apex.
+        - **`KM`**: (vector) Concavity factors for each apex, which control the curvature of the fan.
+      - **`'infinite'`**: Generates a fan with an infinite slope.
+        - **`tanAlphaM`**: (vector) Defines the slope angles (tangents) for each apex.
+        - **`KM`**: (vector) Concavity factors for each apex.
+        - **`tanInfiniteM`**: (vector) Slope values for cases where the tangent approaches infinity, useful for modeling extreme or vertical slopes.
+      - **`'myProfile'`**: Uses custom profiles for fan generation.
+        - **`dz_interpM`**: (cell array) Contains interpolation values for elevation, used to create spline-based morphologies for the fan.
+
+    - **`dispflag`**: (scalar) A flag to control the display of the generated topography. Set to `1` to visualize the topography, or `0` to skip the visualization. Default is set as `0`.
+
+    - **`saveVisPolygon`**: (scalar) A flag to control whether the visibility polygons should be saved. Set to `1` to save the polygons, or `0` to skip saving them. Default is set as `0`.
+
+    This structure allows for flexible fan generation, enabling the simulation of various fan types by adjusting parameters specific to each morphology type.
+- **Outputs:**
+  - `zTopo`: 2D matrix of final fan topography (elevation after aggradation).
+  - `kTopoAll`: 2D matrix with indices of the apex dominating each mesh grid point.
+  - `xyzkApexAll`: Matrix of apex coordinates and indices (including child apexes).
+  - `xyzVisPolygon`: Cell array of 3D coordinates (`x`, `y`, `z`) for visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
+  - `xyVisPolygonAll`: Matrix of `x` and `y` coordinates for all visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
+  - `thetaMesh`: 2D matrix showing the angle of each point relative to the apex(es).
+
+
 
 
 ## How to Cite

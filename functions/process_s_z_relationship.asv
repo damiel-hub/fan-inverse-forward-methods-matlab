@@ -70,11 +70,9 @@ else
     nan_index = isnan(s_flaten) | isnan(z_flaten);
     s_flaten(nan_index) = [];
     z_flaten(nan_index) = [];
-    dd_max = max(s_flaten);
-    dd_in = 0:ds:dd_max;
-
-    if ~isempty(s_flaten)
-        p = polyfit(s_flaten, z_flaten, 2);
+    
+    if ~isempty(bin_pts_mid_s)
+        p = polyfit(bin_pts_mid_s, Q2, 2);
         a = p(1);
         b = p(2);
         c = p(3);
@@ -87,6 +85,8 @@ else
         z_do = (2 * a * dd_max + b) * dd_do - a * dd_max^2 + c;
         
         if pltFlag
+        % Plot the data
+        plot(bin_pts_mid_s, Q2, 'b.')
         % Plot the fit and extrapolations
         plot(dd_in, z_in, 'b-');
         plot(dd_up, z_up, 'b--');

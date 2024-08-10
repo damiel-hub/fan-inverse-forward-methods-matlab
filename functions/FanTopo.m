@@ -31,8 +31,8 @@ function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = 
 % zTopo - 2D matrix of final fan topography (elevation after aggradation).
 % kTopoAll - 2D matrix with indices of the apex dominating each mesh grid point.
 % xyzkApexAll - Matrix of apex coordinates and indices (including child apexes).
-% xyzVisPolygon - Cell array of 3D coordinates (x, y, z) for visibility polygons. (need saveVisPolygon to be 1)
-% xyVisPolygonAll - Matrix of x and y coordinates for all visibility polygons. (need saveVisPolygon to be 1)
+% xyzVisPolygon - Cell array of 3D coordinates (`x`, `y`, `z`) for visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
+% xyVisPolygonAll - Matrix of `x` and `y` coordinates for all visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
 % thetaMesh - 2D matrix of angular distribution relative to apex(es).
 
 % Tzu-Yin Kasha Chen, March 2019; modified Aug 2022
