@@ -52,7 +52,7 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     % Set color limits and colorbar
     clim([min(zDiff, [], 'all'), max(zDiff, [], 'all')])
     c = colorbar;
-    ylabel(c,'\Delta z')
+    ylabel(c,'\Delta z (m)')
 
     % Plot contour
     contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k')
@@ -60,9 +60,11 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
 
     if ~isnan(fanBoundarySHP)
         % Add title
-        title(['sim volume = ' num2str(fanVolume, '%.0f') ' [L^3] in boundary'])
+        title(['sim volume = ' num2str(fanVolume, '%.0f') ' (m^3) in boundary'])
     else
-        title(['sim volume = ' num2str(fanVolume, '%.0f') ' [L^3]'])
+        title(['sim volume = ' num2str(fanVolume, '%.0f') ' (m^3)'])
     end
+    xlabel('Easting (m)')
+    ylabel('Northing (m)')
     hold off
 end

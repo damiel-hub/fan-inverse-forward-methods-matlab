@@ -25,14 +25,14 @@ function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = 
 %   caseName = 'myProfile'
 %       dz_interpM - (cell array) Interpolation values for elevation, used in spline-based morphologies.
 %   dispflag - (scalar) Flag to display the generated topography (1 for on, 0 for off).
-%   saveVisPolygon - (scalar) Flag to save visibility polygons (1 for yes, 0 for no).
+%   saveVisPolygon - (scalar) Flag to save visibility polygons (1 for yes, 0 for no). 
 
 % Outputs:
 % zTopo - 2D matrix of final fan topography (elevation after aggradation).
 % kTopoAll - 2D matrix with indices of the apex dominating each mesh grid point.
 % xyzkApexAll - Matrix of apex coordinates and indices (including child apexes).
-% xyzVisPolygon - Cell array of 3D coordinates (x, y, z) for visibility polygons.
-% xyVisPolygonAll - Matrix of x and y coordinates for all visibility polygons.
+% xyzVisPolygon - Cell array of 3D coordinates (x, y, z) for visibility polygons. (need saveVisPolygon to be 1)
+% xyVisPolygonAll - Matrix of x and y coordinates for all visibility polygons. (need saveVisPolygon to be 1)
 % thetaMesh - 2D matrix of angular distribution relative to apex(es).
 
 % Tzu-Yin Kasha Chen, March 2019; modified Aug 2022
@@ -89,11 +89,6 @@ kTopoAll = nan(size(zMesh));
 xyzVisPolygon = {};
 xyVisPolygonAll = [];
 
-if ~options.saveVisPolygon
-    disp('xyzVisPolygon: off');
-    disp('xyVisPolygonAll: off');
-end
-
 if ~options.dispflag
     figure
 end
@@ -127,7 +122,7 @@ for jj = 1:length(zApexM)
             xContour = C(1,:)'; xContour(kNan) = nan; xContour(1) = [];
             yContour = C(2,:)'; yContour(kNan) = nan; yContour(1) = [];
             % find visibility polygon and children apexes:
-            [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/10,0);
+            [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/5,0);
             
             if length(xVisi)>5 % ignore the apex whose impact is too small
                 

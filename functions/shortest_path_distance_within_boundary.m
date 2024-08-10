@@ -31,10 +31,11 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
         axis xy
         axis equal
         axis tight
-        colorbar
+        c = colorbar;
+        ylabel(c,'Shortest Path Distance (m)')
         title('Shortest Path Distance Map')
-        xlabel('X Coordinates')
-        ylabel('Y Coordinates')
+        xlabel('Easting (m)')
+        ylabel('Northing (m)')
     end
 
 end

@@ -48,12 +48,15 @@ function [zTopo, heightAG_Volume_All] = fanTopoSimVolumeMask(interpV, minMaxInit
             dod(~volMask) = nan;
             
             fanVolume = sum(dod, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1))^2;
+
             if any(~volMask(:))
                 fprintf('HAG = %.2f [L], Volume = %.2f [L^3], within given boundary\n', interpHAG(i), fanVolume);
             else
                 fprintf('HAG = %.2f [L], Volume = %.2f [L^3], within simulation area\n', interpHAG(i), fanVolume);
             end
+            
             heightAG_Volume_All = [heightAG_Volume_All; interpHAG(i), fanVolume];
+            
             if abs(fanVolume - interpV(i)) <= interpV(i) * tol
                 interpV(i) = -1;
             end

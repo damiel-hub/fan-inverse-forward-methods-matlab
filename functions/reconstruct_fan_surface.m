@@ -12,9 +12,14 @@ arguments
     dz_profile
     options.fanBoundarySHP = nan;
     options.tol = 0.03
+    options.debug = false;
+    options.epgs_code = 3826;
+    
 end
 
 fan_boundary_shp = options.fanBoundarySHP;
+EPGS_code = options.epgs_code;
+Debug_io = options.debug;
 
 % Handle fan boundary if provided
 if ~isnan(fan_boundary_shp)
@@ -50,6 +55,13 @@ parfor i = 1:2
         fprintf('HAG = %.2f [L], Volume = %.2f [L^3], within given boundary\n', guessHeight, fanVolume);
     else
         fprintf('HAG = %.2f [L], Volume = %.2f [L^3], within simulation area\n', guessHeight, fanVolume);
+    end
+    if Debug_io
+    if i == 1
+        writeGeoTiff(single(zTopo),'guessHeight_bottom.tif',EPGS_code,min(xMesh(:)),max(xMesh(:)),min(yMesh(:)),max(yMesh(:)),'south','west')
+    else
+        writeGeoTiff(single(zTopo),'guessHeight_top.tif',EPGS_code,min(xMesh(:)),max(xMesh(:)),min(yMesh(:)),max(yMesh(:)),'south','west')
+    end
     end
 end
 
