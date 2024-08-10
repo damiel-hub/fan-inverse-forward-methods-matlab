@@ -138,9 +138,8 @@ for jj = 1:length(zApexM)
                 end
                 
                 % update fan surface to the visible sector occluded by boundar surface and other fan sectors:
-                edge = [1:length(xVisi);2:length(xVisi)+1]';
-                edge(end)=1;
-                isVisible = inpoly2([xMesh(:),yMesh(:)],[xVisi,yVisi],edge);
+                [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
+                isVisible = inpoly2([xMesh(:),yMesh(:)],NODE,EDGE);
                 isVisible = reshape(isVisible,nr,nc);
 
                 thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
@@ -153,7 +152,7 @@ for jj = 1:length(zApexM)
                     if isempty(xyVisPolygonAll)
                         xyVisPolygonAll = [xVisi, yVisi];
                     else
-                        isVisible = inpoly2(xyVisPolygonAll, [xVisi, yVisi], edge);
+                        isVisible = inpoly2([xyVisPolygonAll(:,1), xyVisPolygonAll(:,2)], NODE, EDGE);
                         xyVisPolygonAll(isVisible, :) = [];
                         xyVisPolygonAll = [xyVisPolygonAll; [xVisi, yVisi]];
                     end
@@ -257,6 +256,28 @@ if flip_lr
     zTopo = fliplr(zTopo);
     thetaMesh = fliplr(thetaMesh);
     kTopoAll = fliplr(kTopoAll);
+end
+
+
+function [NODE, EDGE] = getNodeAndEdge(x, y)
+    % getNodeAndEdge creates the NODE and EDGE arrays from x and y coordinates.
+    %
+    % Inputs:
+    %   x - A vector of x coordinates of the polygon's vertices
+    %   y - A vector of y coordinates of the polygon's vertices
+    %
+    % Outputs:
+    %   NODE - An Mx2 array of the polygon's vertices
+    %   EDGE - A Px2 array of edge indexing
+
+    % Combine x and y into NODE array
+    NODE = [x(:), y(:)];
+
+    % Create EDGE array
+    numVertices = length(x);
+    EDGE = [1:numVertices; 2:numVertices+1]';
+    EDGE(end) = 1;
+
 end
 
 end

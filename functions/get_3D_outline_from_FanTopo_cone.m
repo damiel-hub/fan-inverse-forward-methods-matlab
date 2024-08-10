@@ -56,5 +56,5 @@ for i = 1:length(start_index)
     poly_z(nanMask) = [];
 
     poly_xyz_all{end+1} = [poly_x,poly_y,poly_z;poly_x(1),poly_y(1),poly_z(1)];
-    hold on
+
 end

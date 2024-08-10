@@ -6,8 +6,7 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     if nargin < 8 || isempty(contourInterval)
         contourInterval = 10;
     end
-    % Calculate fan volume
-    fanVolume = sum(zTopo - zMesh, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
+
 
     % Fill NaNs in zTopo using zMesh
     zTopoFill = zTopo;
@@ -34,8 +33,18 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
         volumeCalculateExtentXY = [fan_boundary_x', fan_boundary_y'];
     
         % Plot volume calculation extent if provided
-        plot(volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2), 'g-')
+        plot(volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2), 'r-')
+
+        inMask = inpolygon(xMesh,yMesh,volumeCalculateExtentXY(:,1), volumeCalculateExtentXY(:,2));
+    else
+        inMask = true(size(zTopo));
     end
+
+    dzMesh = zTopo - zMesh;
+    dzMesh(~inMask) = nan;
+    % Calculate fan volume
+    fanVolume = sum(dzMesh, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
+
     colormap("turbo")
     % Plot apex point
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
@@ -49,7 +58,11 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k')
     axis equal
 
-    % Add title
-    title(['sim volume = ' num2str(fanVolume, '%.0f') ' [L^3]'])
+    if ~isnan(fanBoundarySHP)
+        % Add title
+        title(['sim volume = ' num2str(fanVolume, '%.0f') ' [L^3] in boundary'])
+    else
+        title(['sim volume = ' num2str(fanVolume, '%.0f') ' [L^3]'])
+    end
     hold off
 end

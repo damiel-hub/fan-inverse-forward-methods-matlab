@@ -1,6 +1,5 @@
 path(path,'functions')
 path(path,'functions\inpoly-master')
-
 %% Set data path name
 topo_pre_event = 'data\topo_PuTunPuNas_min_before2014_riverbed2014.tif';
 topo_post_event = 'data\topo_PuTunPuNas_2014.tif';
@@ -50,10 +49,10 @@ xApex = xMesh_crop(iApex);
 yApex = yMesh_crop(iApex);
 
 guessHeightAboveGround_top = 10;
-guessHeightAboveGround_bottom = 5;
+guessHeightAboveGround_bottom = 1;
 
-tic
 % Reconstruct the topography
 [zTopo_sim, heightAG_Volume_All] = reconstruct_fan_surface(xMesh, yMesh, zMesh_pre, xApex, yApex, fanSimVolume, guessHeightAboveGround_top, guessHeightAboveGround_bottom, fitting_s_z_within_boundary,"fanBoundarySHP",shape_fan_boundary);
 plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex)
-toc
+plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex, shape_fan_boundary)
+
