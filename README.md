@@ -1,4 +1,4 @@
-# Inverse Computational Morphology of Confined Debris and Alluvial Fans Using the Visibility Polygon
+# Inverse Computational Morphology of Debris and Alluvial Fans
 
 The forward method, developed by [Chen and Capart (2022)](https://doi.org/10.1016/j.cageo.2022.105228), simulates alluvial fan topography using a fast algorithm based on the visibility polygon. This method requires initial terrain data, apex location, and the elevation-distance relationship (elevation profile) as inputs to create a detailed topographic model of the alluvial fan.
 
@@ -194,7 +194,7 @@ If you use this project in your research or work, please give us credit by citin
 
 ### Inverse method: extracting the distance-elevation relationship
 ```
-Chiu, Y.H. & Capart, H. (In process). *Inverse Computational Morphology of Confined Debris and Alluvial Fans Using the Visibility Polygon*. Retrieved from [https://github.com/damiel-hub/geometric-alluvial-fan].
+Chiu, Y.H. & Capart, H. (In process). *Inverse Computational Morphology of Debris and Alluvial Fans*. Retrieved from [https://github.com/damiel-hub/geometric-alluvial-fan].
 ```
 ### Forward method: simulating fan topography
 
