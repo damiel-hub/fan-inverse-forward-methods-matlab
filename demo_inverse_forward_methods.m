@@ -1,5 +1,5 @@
 % Add necessary paths for function dependencies
-addpath('functions', 'functions\inpoly-master');
+addpath('functions', 'functions/inpoly-master');
 
 %% Set DEM resolution and file paths
 DEM_resolution = 20; % Available resolutions: 5, 10, 20 meters
