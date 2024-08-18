@@ -2,14 +2,14 @@
 addpath('functions', 'functions/inpoly-master');
 
 %% Set DEM resolution and file paths
-DEM_resolution = 20; % Available resolutions: 5, 10, 20 meters
+DEM_resolution = 10; % Available resolutions: 10, 20 meters
 
 % Estimated Running Time for Different DEM Resolutions:
 % System 1: AMD Ryzen 9 5900X, NVIDIA GeForce RTX 3080, MATLAB R2023b
-% 5-meter: 349.4 seconds, 10-meter: 73.2 seconds, 20-meter: 28.5 seconds
+% 10-meter: 73.2 seconds, 20-meter: 28.5 seconds
 %
 % System 2: Intel Core i7-7700HQ, NVIDIA GeForce GTX 1050, MATLAB R2022a
-% 5-meter: 780.0 seconds, 10-meter: 176.1 seconds, 20-meter: 90.5 seconds
+% 10-meter: 176.1 seconds, 20-meter: 90.5 seconds
 
 tic;
 
@@ -41,7 +41,7 @@ figure;
 scatter(sMap(:), zMesh_post_crop(:), 'k.')
 hold on;
 fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bin_size, ds, outlength, 1);
-xlabel('Shortest in polygon distance, s (m)')
+xlabel('Shortest path distance to all data points, s (m)')
 ylabel('Elevation, z (m)')
 
 % Plot and fit along boundary
@@ -49,7 +49,7 @@ figure
 plot(xysBoundary(:,3), zBoundary, 'k-')
 hold on
 fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
-xlabel('Shortest distance on boundary of polygon, s (m)')
+xlabel('Shortest path distance to boundary points, s (m)')
 ylabel('Elevation, z (m)')
 
 %% Forward Method: Reconstruct the debris and alluvial fan topography

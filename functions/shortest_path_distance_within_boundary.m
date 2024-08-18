@@ -27,7 +27,7 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
         imagesc(xMesh_crop(1,:), yMesh_crop(:,1), sMap)
         hold on
         plot(xApex, yApex, 'r.', 'MarkerSize', 6)
-        contour(xMesh_crop, yMesh_crop, sMap, 'k')
+        contour(xMesh_crop, yMesh_crop, sMap, 0:100:max(sMap(:)), 'k')
         axis xy
         axis equal
         axis tight
