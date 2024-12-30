@@ -33,7 +33,7 @@ if options.medianFilter
     Q2(isnan(Q2)) = [];
 
     % Polynomial fitting and extrapolation
-    dd_max = max(bin_pts_mid_s);
+    dd_max = max(s_flaten);
     dd_in = 0:ds:dd_max;
     
     if ~isempty(bin_pts_mid_s)

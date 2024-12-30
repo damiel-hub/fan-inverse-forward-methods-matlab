@@ -11,7 +11,7 @@ DEM_resolution = 10; % Available resolutions: 10, 20 meters
 % System 2: Intel Core i7-7700HQ, NVIDIA GeForce GTX 1050, MATLAB R2022a
 % 10-meter: 176.1 seconds, 20-meter: 90.5 seconds
 
-tic;
+tic
 
 % File paths based on resolution
 topo_pre_event = sprintf('data/topo_PuTunPuNas_min_before2014_riverbed2014_%dm.tif', DEM_resolution);
@@ -37,9 +37,9 @@ ds = 5;
 outlength = 500;
 
 % Plot and fit within boundary
-figure;
+figure
 scatter(sMap(:), zMesh_post_crop(:), 'k.')
-hold on;
+hold on
 fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bin_size, ds, outlength, 1);
 xlabel('Shortest path distance to all data points, s (m)')
 ylabel('Elevation, z (m)')
@@ -80,4 +80,4 @@ plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex); % Volume w
 plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex, shape_fan_boundary); % Volume within given boundary
 plotFanTopoResults(xMesh, yMesh, zMesh_post, zMesh_pre, xApex, yApex, shape_fan_boundary); % Elevation difference before and after event
 
-toc;
+toc
