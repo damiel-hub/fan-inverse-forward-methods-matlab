@@ -15,6 +15,8 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
     % Set the apex height for the shortest path calculation
     zApex_s = diagonal_length * 10;
     
+    % writeGeoTiff(wallMesh, 'zWall.tif', 3826, min(xMesh_crop(:)), max(xMesh_crop(:)), min(yMesh_crop(:)), max(yMesh_crop(:)), 'north', 'west')
+
     % Compute the shortest path topography
     [sTopo, ~, ~, ~, ~, ~] = FanTopo(xMesh_crop, yMesh_crop, wallMesh, xApex, yApex, zApex_s, 'tanAlphaM', 1);
     
