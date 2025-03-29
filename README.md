@@ -23,15 +23,6 @@ Before you begin, ensure you have the following:
 - **MATLAB** (version R2021a or later recommended)
 - **Required Toolbox**: Mapping Toolbox, Parallel Computing Toolbox
 
-### Installing Additional Dependencies
-
-1. Download the `inpoly` function from [GitHub](https://github.com/dengwirda/inpoly).
-2. Extract the ZIP file and move the `inpoly-master` folder into the `functions\` directory of this project.
-3. Add the `inpoly-master` folder to your MATLAB path by running the following command:
-
-    ```matlab
-    addpath(genpath('functions/inpoly-master'))
-    ```
 
 ## Usage
 

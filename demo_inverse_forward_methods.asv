@@ -12,7 +12,7 @@ addpath('functions')
 %          from the author.
 % 
 % Reference:
-%     J. Kepner, D. Engwirda, V. Gadepally, C. Hill, T. Kraska, M. Jones, 
+% [1] J. Kepner, D. Engwirda, V. Gadepally, C. Hill, T. Kraska, M. Jones, 
 %     A. Kipf, L. Milechin, N. Vembar: Fast Mapping onto Census Blocks, 
 %     IEEE HPEC, 2020.
 % 
@@ -24,9 +24,8 @@ addpath('functions/inpoly-master')
 % This function allows multiple colormaps to coexist in a single figure.
 %
 % Developed by John Iversen (2005-2022).
-%
 % Source: https://github.com/jiversen/freezeColors
-% Licensed under the MIT License.
+% License: Free for all uses (see freezeColors.m for details).
 %
 % Adding freezeColors to the MATLAB path:
 addpath('functions/freezeColors-main')
