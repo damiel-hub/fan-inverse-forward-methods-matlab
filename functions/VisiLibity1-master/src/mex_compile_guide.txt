@@ -1,0 +1,4 @@
+mex -c visilibity.cpp
+mex -v visibility_polygon_v2.cpp visilibity.obj
+mex -v shortest_path.cpp visilibity.obj
+mex -v in_environment.cpp visilibity.obj

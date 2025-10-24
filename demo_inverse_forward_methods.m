@@ -34,7 +34,7 @@ addpath('functions/inpoly-master')
 addpath('functions/freezeColors-main')
 
 %% Set DEM resolution and file paths
-DEM_resolution = 20; % Available resolutions: 10, 20 meters
+DEM_resolution = 10; % Available resolutions: 10, 20 meters
 
 % Estimated Running Time for Different DEM Resolutions:
 % System 1: AMD Ryzen 9 5900X, NVIDIA GeForce RTX 3080, MATLAB R2023b
@@ -42,6 +42,10 @@ DEM_resolution = 20; % Available resolutions: 10, 20 meters
 %
 % System 2: Intel Core i7-7700HQ, NVIDIA GeForce GTX 1050, MATLAB R2022a
 % 10-meter: 176.1 seconds, 20-meter: 90.5 seconds
+%
+% System 3: Intel Utral 7 155H, MATLAB R2024a
+% 10-meter: 91.6 seconds, 20-meter: 41.2 seconds
+
 
 tic
 
@@ -64,7 +68,7 @@ zBoundary = xyzsBoundary(:,3);
 
 % Step 2:
 % Fit quadratic elevation-distance relationship
-bin_size = 100;
+bin_num = 50;
 ds = 5;
 outlength = 500;
 
@@ -72,7 +76,7 @@ outlength = 500;
 figure
 scatter(sMap(:), zMesh_post_crop(:), 'k.')
 hold on
-fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bin_size, ds, outlength, 1);
+fitting_s_z_within_boundary = process_s_z_relationship(sMap, zMesh_post_crop, bin_num, ds, outlength, 1);
 xlabel('Shortest path distance to all data points, s (m)')
 ylabel('Elevation, z (m)')
 
@@ -80,7 +84,7 @@ ylabel('Elevation, z (m)')
 figure
 plot(xyzsBoundary(:,4), zBoundary, 'k-')
 hold on
-fitting_s_z_along_boundary = process_s_z_relationship(xyzsBoundary(:,4), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
+fitting_s_z_along_boundary = process_s_z_relationship(xyzsBoundary(:,4), zBoundary, bin_num, ds, outlength, 1, 'medianFilter', 0);
 xlabel('Shortest path distance to boundary points, s (m)')
 ylabel('Elevation, z (m)')
 
