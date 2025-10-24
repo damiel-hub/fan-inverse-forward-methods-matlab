@@ -38,7 +38,7 @@ DEM_resolution = 10; % Available resolutions: 10, 20 meters
 
 % Estimated Running Time for Different DEM Resolutions:
 % System 1: AMD Ryzen 9 5900X, NVIDIA GeForce RTX 3080, MATLAB R2023b
-% 10-meter: 73.2 seconds, 20-meter: 28.5 seconds
+% 10-meter: 38.57 seconds, 20-meter: 17.65 seconds
 %
 % System 2: Intel Core i7-7700HQ, NVIDIA GeForce GTX 1050, MATLAB R2022a
 % 10-meter: 176.1 seconds, 20-meter: 90.5 seconds
