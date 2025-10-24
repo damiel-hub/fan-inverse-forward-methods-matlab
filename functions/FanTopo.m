@@ -125,23 +125,14 @@ for jj = 1:length(zApexM)
                 
                 % update fan surface to the visible sector occluded by boundar surface and other fan sectors:
                 [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
-<<<<<<< HEAD
-                isVisible = inpoly2([xMesh(:),yMesh(:)],NODE,EDGE);
-                isVisible = reshape(isVisible,nr,nc);
-=======
 
                 [isVisible, onVisible] = inpolygon_optimized(xMesh, yMesh, xVisi, yVisi);
                 isVisible = isVisible | onVisible;
->>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 
                 mask = isVisible & (zCone > zTopo | isnan(zTopo));                
                 
                 zTopo(mask) = zCone(mask);
                 kTopo(zCone==zTopo) = kApex;
-<<<<<<< HEAD
-
-=======
->>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 if options.runthetaMesh
                     thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
                     thetaMesh(mask) = thetaMesh_temp(mask);
@@ -191,10 +182,6 @@ for jj = 1:length(zApexM)
                 else
                     zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
                 end
-<<<<<<< HEAD
-
-=======
->>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 zAtopo_vale = coneFunction(zAtopo,sqrt(2)*dxMesh*2, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
                 xyzkApex(xyzkApex(:,3)<zAtopo_vale,:) = [];
                 % sort the apexes by elevation

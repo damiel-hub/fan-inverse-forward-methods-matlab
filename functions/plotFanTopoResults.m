@@ -53,10 +53,6 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
 
     % Set color limits and colorbar
-<<<<<<< HEAD
-    % clim([min(clim_value), max(clim_value)])
-=======
->>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
     c = colorbar;
     ylabel(c,'\Delta z (m)')
 
