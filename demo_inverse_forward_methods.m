@@ -1,5 +1,7 @@
+close all; clc; clear;
+
 % Add necessary paths for function dependencies
-addpath('functions')
+addpath(genpath('functions'))
 
 % INPOLY: A fast point-in-polygon function developed by Darren Engwirda
 % 
@@ -32,7 +34,7 @@ addpath('functions/inpoly-master')
 addpath('functions/freezeColors-main')
 
 %% Set DEM resolution and file paths
-DEM_resolution = 10; % Available resolutions: 10, 20 meters
+DEM_resolution = 20; % Available resolutions: 10, 20 meters
 
 % Estimated Running Time for Different DEM Resolutions:
 % System 1: AMD Ryzen 9 5900X, NVIDIA GeForce RTX 3080, MATLAB R2023b
@@ -57,8 +59,8 @@ shape_fan_boundary = 'data/shape/PT2014.shp';
 
 % Calculate shortest path distance within and along boundary
 sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop, 1);
-xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop);
-zBoundary = interp2(xMesh, yMesh, zMesh_post, xysBoundary(:,1), xysBoundary(:,2));
+xyzsBoundary = shortest_path_distance_along_boundary(topo_post_event, shape_fan_boundary);
+zBoundary = xyzsBoundary(:,3);
 
 % Step 2:
 % Fit quadratic elevation-distance relationship
@@ -76,9 +78,9 @@ ylabel('Elevation, z (m)')
 
 % Plot and fit along boundary
 figure
-plot(xysBoundary(:,3), zBoundary, 'k-')
+plot(xyzsBoundary(:,4), zBoundary, 'k-')
 hold on
-fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
+fitting_s_z_along_boundary = process_s_z_relationship(xyzsBoundary(:,4), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
 xlabel('Shortest path distance to boundary points, s (m)')
 ylabel('Elevation, z (m)')
 
@@ -86,28 +88,23 @@ ylabel('Elevation, z (m)')
 
 % Step 3
 % Load initial topography
-[xMesh, yMesh, zMesh_pre] = readGeoTiff(topo_pre_event);
+[~, ~, zMesh_pre] = readGeoTiff(topo_pre_event);
 [~, ~, zMesh_pre_crop] = clipGeoTiff(topo_pre_event, shape_fan_boundary);
 
-% Calculate fan volume
-fanSimVolume = sum(zMesh_post_crop - zMesh_pre_crop, 'all', 'omitnan') * (xMesh_crop(1,2) - xMesh_crop(1,1))^2;
-fprintf('The expected simulated fan volume is %.2f cubic meters (L^3) within the defined boundary.\n', fanSimVolume);
 
 % Determine the apex location
-[zApex, iApex] = max(zMesh_post_crop(:));
+[~, iApex] = max(zMesh_post_crop(:));
 xApex = xMesh_crop(iApex);
 yApex = yMesh_crop(iApex);
 
-% Set initial guesses for height above ground
-guessHeightAboveGround_bottom = 1;
-guessHeightAboveGround_top = 10;
 
-% Reconstruct topography
-[zTopo_sim, heightAG_Volume_All] = reconstruct_fan_surface(xMesh, yMesh, zMesh_pre, xApex, yApex, fanSimVolume, guessHeightAboveGround_top, guessHeightAboveGround_bottom, fitting_s_z_within_boundary, "fanBoundarySHP", shape_fan_boundary);
+zApex = interp1(fitting_s_z_within_boundary(:,1), fitting_s_z_within_boundary(:,2), 0);
+[zTopo,~,~,~,~,~] = FanTopo(xMesh, yMesh, zMesh_pre, xApex, yApex, zApex, "caseName", 'myProfile', 'dz_interpM', {fitting_s_z_within_boundary});
 
+%%
 % Plot results
-plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex); % Volume within simulation area
-plotFanTopoResults(xMesh, yMesh, zTopo_sim, zMesh_pre, xApex, yApex, shape_fan_boundary); % Volume within given boundary
+plotFanTopoResults(xMesh, yMesh, zTopo, zMesh_pre, xApex, yApex); % Volume within simulation area
+plotFanTopoResults(xMesh, yMesh, zTopo, zMesh_pre, xApex, yApex, shape_fan_boundary); % Volume within given boundary
 plotFanTopoResults(xMesh, yMesh, zMesh_post, zMesh_pre, xApex, yApex, shape_fan_boundary); % Elevation difference before and after event
 
 toc

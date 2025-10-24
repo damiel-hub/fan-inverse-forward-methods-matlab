@@ -1,10 +1,10 @@
-function writeGeoTiff(outputData,outputTiffName,coordRefSysCode,xCorMin,xCorMax,yCorMin,yCorMax,colStart,rowStart)
+function writeGeoTiff_auto(xMesh, yMesh, outputData, outputTiffName, coordRefSysCode)
 
 % colStart='south' or 'north'
 % rowStart='west' or 'east'
 % coordRefSysCode = 32720 (PCS_WGS84_UTM_zone_20S)
 % coordRefSysCode = 3826 (TWD97)
-% last edit on 24/08/05 by Damiel
+% last edit on 25/09/07 by Damiel
 
 % TWD97 geoTags
 %{
@@ -32,8 +32,23 @@ geoTags.ProjFalseEastingGeoKey = 250000;
 geoTags.ProjFalseNorthingGeoKey = 0;
 geoTags.ProjScaleAtNatOriginGeoKey = 0.9999;
 %}
+    xCorMin = min(xMesh(:));
+    xCorMax = max(xMesh(:));
+    yCorMin = min(yMesh(:));
+    yCorMax = max(yMesh(:));
 
     R = maprefcells();
+    R.ColumnsStartFrom = 'south';
+    R.RowsStartFrom = 'west';
+    
+    if yMesh(end,1) < yMesh(1,1)
+        outputData = flipud(outputData);
+    end
+
+    if xMesh(1,end) < xMesh(1,1)
+        outputData = fliplr(outputData);
+    end
+
     dx = (xCorMax-xCorMin)/(size(outputData,2)-1);
     dy = (yCorMax-yCorMin)/(size(outputData,1)-1);
     xmin = xCorMin-dx/2;
@@ -45,8 +60,6 @@ geoTags.ProjScaleAtNatOriginGeoKey = 0.9999;
     R.XWorldLimits=[xmin,xmax];
     R.YWorldLimits=[ymin,ymax];
     R.RasterSize=size(outputData);
-    R.ColumnsStartFrom = colStart;
-    R.RowsStartFrom = rowStart;
     R.ProjectedCRS = projcrs(coordRefSysCode);
     geotiffwrite(outputTiffName, outputData, R,'CoordRefSysCode', coordRefSysCode);
 

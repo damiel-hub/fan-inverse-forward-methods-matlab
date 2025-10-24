@@ -1,4 +1,4 @@
-function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval)
+function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval, clim_value)
 
     if nargin < 7 || isempty(fanBoundarySHP)
         fanBoundarySHP = nan;
@@ -36,7 +36,10 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     % Plot color difference map
     pcolor(xMesh, yMesh, zDiff)
     shading flat
+    
     colormap("turbo")
+    clim([0 max(zDiff(:))])
+    freezeColors
 
     % Calculate fan volume
     fanVolume = sum(zDiff, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
@@ -50,12 +53,11 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
 
     % Set color limits and colorbar
-    clim([min(zDiff, [], 'all'), max(zDiff, [], 'all')])
     c = colorbar;
     ylabel(c,'\Delta z (m)')
 
     % Plot contour
-    contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k')
+    contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k', 'LineWidth',0.1)
     axis equal
 
     if ~isnan(fanBoundarySHP)
