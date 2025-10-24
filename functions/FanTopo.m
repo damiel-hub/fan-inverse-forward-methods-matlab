@@ -52,6 +52,7 @@ arguments
     options.dz_interpM = arrayfun(@(x) nan(1, x), 1:length(zApexM), 'UniformOutput', false);
     options.dispflag = 0
     options.saveVisPolygon = 0
+    options.runthetaMesh = 0
 end
 
 
@@ -90,7 +91,11 @@ xyzVisPolygon = {};
 xyVisPolygonAll = [];
 
 if ~options.dispflag
-    figure
+    figure;
+    lightterrain2D_imagesc(xMesh, yMesh, zMesh); % This sets hold on
+    axis equal;
+    axis([xMin, xMax, yMin, yMax]);
+    clim([zMin, zMax]);
 end
 
 zTopo = nan(size(zMesh));
@@ -136,12 +141,16 @@ for jj = 1:length(zApexM)
                 [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
                 isVisible = inpoly2([xMesh(:),yMesh(:)],NODE,EDGE);
                 isVisible = reshape(isVisible,nr,nc);
-
-                thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
-                mask = isVisible & (zCone > zTopo | isnan(zTopo));
-                thetaMesh(mask) = thetaMesh_temp(mask);
+                
+                mask = isVisible & (zCone > zTopo | isnan(zTopo));                
+                
                 zTopo(mask) = zCone(mask);
                 kTopo(zCone==zTopo) = kApex;
+
+                if options.runthetaMesh
+                    thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
+                    thetaMesh(mask) = thetaMesh_temp(mask);
+                end
                 
                 if options.saveVisPolygon
                     if isempty(xyVisPolygonAll)
@@ -185,7 +194,12 @@ for jj = 1:length(zApexM)
                     end
                 end
                 % remove buried apexes
-                zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
+                if sum(~isnan(zTopo(:))) <= 4 % To prevent only two points in the grid have value and zAtopo become NaN
+                    zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2),"nearest");
+                else
+                    zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
+                end
+
                 zAtopo_vale = coneFunction(zAtopo,sqrt(2)*dxMesh*2, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
                 xyzkApex(xyzkApex(:,3)<zAtopo_vale,:) = [];
 
@@ -205,17 +219,14 @@ for jj = 1:length(zApexM)
         end
         % show topography, active fan contour, and visible sector and apexes:
         if options.dispflag
-            axis equal
-            axis([xMin, xMax, yMin, yMax])
-            clim([zMin, zMax])
-            hold on
-            plot(xVisi, yVisi, 'g-')
-            plot(xApex, yApex, 'ko')
-            plot(xyzkApex(:, 1), xyzkApex(:, 2), 'k.')
-            plot(xChildApex, yChildApex, 'kv')
-            title(['Apex no. ', int2str(kApex)])
-            hold off
-            drawnow
+            % The background is already set and 'hold on' is active.
+            % We just need to plot the new data.
+            plot(xVisi, yVisi, 'g-');
+            plot(xApex, yApex, 'ko');
+            plot(xyzkApex(:, 1), xyzkApex(:, 2), 'k.');
+            plot(xChildApex, yChildApex, 'kv');
+            title(['Apex no. ', int2str(kApex)]);
+            drawnow; % Force the graphics to update now
         end
 
         % proceed to next apex on the list:

@@ -57,8 +57,8 @@ shape_fan_boundary = 'data/shape/PT2014.shp';
 
 % Calculate shortest path distance within and along boundary
 sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop, 1);
-xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop);
-zBoundary = interp2(xMesh, yMesh, zMesh_post, xysBoundary(:,1), xysBoundary(:,2));
+% xysBoundary = shortest_path_distance_along_boundary(xMesh_crop, yMesh_crop, zMesh_post_crop);
+% zBoundary = interp2(xMesh, yMesh, zMesh_post, xysBoundary(:,1), xysBoundary(:,2));
 
 % Step 2:
 % Fit quadratic elevation-distance relationship
@@ -75,12 +75,12 @@ xlabel('Shortest path distance to all data points, s (m)')
 ylabel('Elevation, z (m)')
 
 % Plot and fit along boundary
-figure
-plot(xysBoundary(:,3), zBoundary, 'k-')
-hold on
-fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
-xlabel('Shortest path distance to boundary points, s (m)')
-ylabel('Elevation, z (m)')
+% figure
+% plot(xysBoundary(:,3), zBoundary, 'k-')
+% hold on
+% fitting_s_z_along_boundary = process_s_z_relationship(xysBoundary(:,3), zBoundary, bin_size, ds, outlength, 1, 'medianFilter', 0);
+% xlabel('Shortest path distance to boundary points, s (m)')
+% ylabel('Elevation, z (m)')
 
 %% Forward Method: Reconstruct the debris and alluvial fan topography
 

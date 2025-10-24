@@ -1,4 +1,4 @@
-function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval)
+function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval, clim_value)
 
     if nargin < 7 || isempty(fanBoundarySHP)
         fanBoundarySHP = nan;
@@ -50,12 +50,12 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
 
     % Set color limits and colorbar
-    clim([min(zDiff, [], 'all'), max(zDiff, [], 'all')])
+    % clim([min(clim_value), max(clim_value)])
     c = colorbar;
     ylabel(c,'\Delta z (m)')
 
     % Plot contour
-    contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k')
+    contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k', 'LineWidth',0.1)
     axis equal
 
     if ~isnan(fanBoundarySHP)

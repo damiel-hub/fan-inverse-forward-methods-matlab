@@ -1,9 +1,9 @@
-function [fitting_s_z, bin_pts_mid_s, Q2, ss_in, z_in, ss_up, z_up, ss_do, z_do, s_T, L, S, P, RMSE, dimensionless_drop, slope] = process_s_z_relationship_return_info(sMap, zMap, bin_num, ds, outlength, pltFlag, options)
+function [fitting_s_z, bin_pts_mid_s, Q2, ss_in, z_in, ss_up, z_up, ss_do, z_do, s_T, L, S, P, RMSE, dimensionless_drop, slope, numberPoints_in_bin] = process_s_z_relationship_return_info_width(sMap, zMap, bin_size, ds, outlength, pltFlag, options)
 
 arguments
     sMap
     zMap
-    bin_num
+    bin_size
     ds
     outlength
     pltFlag
@@ -20,8 +20,7 @@ z_flaten(nan_index) = [];
 if options.medianFilter
 
     % Define bins for s values
-    % bin_pts_s = min(s_flaten):bin_num:max(s_flaten);
-    bin_pts_s = linspace(0, max(s_flaten), bin_num);
+    bin_pts_s = min(s_flaten):bin_size:max(s_flaten);
     bin_pts_mid_s = [];
     Q2 = [];
     numberPoints_in_bin = [];

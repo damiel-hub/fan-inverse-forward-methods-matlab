@@ -45,7 +45,7 @@ else % If you want to reconstructure the alluvial fan using the calibration prof
     minMaxInitialGuessHeightVolume = zeros(2, 2);
     
     
-    parfor i = 1:2
+    for i = 1:2
         guessHeight = heights(i);
         zApex = interp2(xMesh, yMesh, zMesh, xApex, yApex) + guessHeight;
         [zTopo, ~, ~] = FanTopo(xMesh, yMesh, zMesh, xApex, yApex, zApex, 'caseName', 'myProfile', 'dz_interpM', {dz_profile});
