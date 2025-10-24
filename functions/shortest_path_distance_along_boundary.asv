@@ -1,0 +1,40 @@
+function xysBoundary = shortest_path_distance_along_boundary(inputGeoTiffPath, shapeFilePath)
+
+        % Read the georeferenced raster data
+    [zMesh, R] = readgeoraster(inputGeoTiffPath);
+
+    % Get the GeoTIFF metadata
+    info = geotiffinfo(inputGeoTiffPath);
+    key = info.GeoTIFFTags.GeoKeyDirectoryTag;
+
+    % Generate full grid coordinates
+    [xMesh, yMesh] = worldGrid(R);
+
+    % Read the shapefile containing the fan boundary polygon
+    fan_boundary = shaperead(shapeFilePath);
+    fan_boundary_x = fan_boundary.X(1:end-1);
+    fan_boundary_y = fan_boundary.Y(1:end-1);
+    
+    fan_boundary_xy = [fan_boundary_x; fan_boundary_y]';
+    fan_boundary_s = [0; cumsum(sum(diff(fan_boundary_xy).^2,2))];
+    interp1()
+
+
+
+
+
+
+    % Extract 3D outline from the visibility polygon and apex information
+    poly_xyz_all = get_3D_outline_from_FanTopo_cone(xyzkApexAll, xyzVisPolygon, 1);
+    
+    % Initialize the boundary array
+    xysBoundary = [];
+    
+    % Calculate the shortest path distance along the boundary
+    for i = 1:length(poly_xyz_all)
+        sOutline = zApex_s - poly_xyz_all{i}(:,3);
+        xysBoundary = [xysBoundary; poly_xyz_all{i}(:,1:2), sOutline;nan nan nan];
+    end
+    
+    
+end

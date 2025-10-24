@@ -1,9 +1,7 @@
 function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = FanTopo(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
 %FANTOPO_SLOPE constructs the constant-slope or concave fan morphology, the apexes
 %positions, and source provenance
-
 % >> [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = reconstruct_fan_surface(xMesh,yMesh,zMesh,xApexM,yApexM,zApexM,options)
-
 % Inputs:
 % xMesh - 2D matrix of x-coordinates for mesh grid points.
 % yMesh - 2D matrix of y-coordinates for mesh grid points.
@@ -26,7 +24,6 @@ function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = 
 %       dz_interpM - (cell array) Interpolation values for elevation, used in spline-based morphologies.
 %   dispflag - (scalar) Flag to display the generated topography (1 for on, 0 for off).
 %   saveVisPolygon - (scalar) Flag to save visibility polygons (1 for yes, 0 for no). 
-
 % Outputs:
 % zTopo - 2D matrix of final fan topography (elevation after aggradation).
 % kTopoAll - 2D matrix with indices of the apex dominating each mesh grid point.
@@ -34,10 +31,8 @@ function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = 
 % xyzVisPolygon - Cell array of 3D coordinates (`x`, `y`, `z`) for visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
 % xyVisPolygonAll - Matrix of `x` and `y` coordinates for all visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
 % thetaMesh - 2D matrix of angular distribution relative to apex(es).
-
 % Tzu-Yin Kasha Chen, March 2019; modified Aug 2022
 % Yuan-Hung Chiu modified Aug 2024
-
 arguments
     xMesh double
     yMesh double
@@ -54,12 +49,9 @@ arguments
     options.saveVisPolygon = 0
     options.runthetaMesh = 0
 end
-
-
 % Expand the x and y coordinates while preserving the order
 flip_lr = xMesh(1,1) > xMesh(1,end);
 flip_ud = yMesh(1,1) > yMesh(end,1);
-
 if flip_lr
     xMesh = fliplr(xMesh);
     zMesh = fliplr(zMesh);
@@ -68,7 +60,6 @@ if flip_ud
     yMesh = flipud(yMesh);
     zMesh = flipud(zMesh);
 end
-
 % add a high wall around the domain
 xMin = min(min(xMesh)); xMax = max(max(xMesh));
 yMin = min(min(yMesh)); yMax = max(max(yMesh));
@@ -81,15 +72,12 @@ dyMesh = (yMax-yMin)/(size(yMesh,1)-1);
 zMesh = ones(size(xMesh))*zMax;
 zMesh(2:end-1,2:end-1) = zMesh0;
 zMesh(isnan(zMesh)) = zMax;
-
-[nr, nc] = size(zMesh);
-
+dxdy = xMesh(1,2) - xMesh(1,1);
 % initialize topography and sorted apex list:
 xyzkApexAll = [];
 kTopoAll = nan(size(zMesh));
 xyzVisPolygon = {};
 xyVisPolygonAll = [];
-
 if ~options.dispflag
     figure;
     lightterrain2D_imagesc(xMesh, yMesh, zMesh); % This sets hold on
@@ -97,10 +85,8 @@ if ~options.dispflag
     axis([xMin, xMax, yMin, yMax]);
     clim([zMin, zMax]);
 end
-
 zTopo = nan(size(zMesh));
 thetaMesh = nan(size(zMesh));
-
 for jj = 1:length(zApexM)
     kTopo = zeros(size(zMesh));
     xyzkApex = [xApexM(jj), yApexM(jj), zApexM(jj), nan];
@@ -126,9 +112,9 @@ for jj = 1:length(zApexM)
             end
             xContour = C(1,:)'; xContour(kNan) = nan; xContour(1) = [];
             yContour = C(2,:)'; yContour(kNan) = nan; yContour(1) = [];
-            % find visibility polygon and children apexes:
+
             [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/5,0);
-            
+
             if length(xVisi)>5 % ignore the apex whose impact is too small
                 
                 if options.saveVisPolygon
@@ -139,14 +125,23 @@ for jj = 1:length(zApexM)
                 
                 % update fan surface to the visible sector occluded by boundar surface and other fan sectors:
                 [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
+<<<<<<< HEAD
                 isVisible = inpoly2([xMesh(:),yMesh(:)],NODE,EDGE);
                 isVisible = reshape(isVisible,nr,nc);
+=======
+
+                [isVisible, onVisible] = inpolygon_optimized(xMesh, yMesh, xVisi, yVisi);
+                isVisible = isVisible | onVisible;
+>>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 
                 mask = isVisible & (zCone > zTopo | isnan(zTopo));                
                 
                 zTopo(mask) = zCone(mask);
                 kTopo(zCone==zTopo) = kApex;
+<<<<<<< HEAD
 
+=======
+>>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 if options.runthetaMesh
                     thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
                     thetaMesh(mask) = thetaMesh_temp(mask);
@@ -161,12 +156,9 @@ for jj = 1:length(zApexM)
                         xyVisPolygonAll = [xyVisPolygonAll; [xVisi, yVisi]];
                     end
                 end
-
                 % add effective children apexes into the apex list
                 CTopo = contour(xMesh,yMesh,kTopo,[1e-6,1e-6],'Visible','off'); % the boundary of previous visibility polygons
                 CTopo(:,CTopo(1,:)==1e-6) = [];
-
-
                 min_d_xyVisi = min(sqrt((diff(xVisi).^2+diff(yVisi).^2))); % threshold for finding the semi-apexes that are too close
                 D = sqrt( (xChildApex-xApex).^2 + (yChildApex-yApex).^2 );
                 zConeChildApex = coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
@@ -199,10 +191,12 @@ for jj = 1:length(zApexM)
                 else
                     zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
                 end
+<<<<<<< HEAD
 
+=======
+>>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
                 zAtopo_vale = coneFunction(zAtopo,sqrt(2)*dxMesh*2, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
                 xyzkApex(xyzkApex(:,3)<zAtopo_vale,:) = [];
-
                 % sort the apexes by elevation
                 if size(xyzkApex,1)>kApex
                     xyzkApex(kApex+1:end,:) = sortrows(xyzkApex(kApex+1:end,:),3,'descend');
@@ -228,7 +222,6 @@ for jj = 1:length(zApexM)
             title(['Apex no. ', int2str(kApex)]);
             drawnow; % Force the graphics to update now
         end
-
         % proceed to next apex on the list:
         kApex = kApex + 1;
     end
@@ -245,13 +238,11 @@ end
 if ~options.dispflag
     close
 end
-
 % Remove the high wall
 zTopo = zTopo(2:end-1, 2:end-1);
 thetaMesh = thetaMesh(2:end-1, 2:end-1);
 kTopoAll = kTopoAll(2:end-1, 2:end-1);
 kTopoAll(kTopoAll == 0) = nan;
-
 % Flip back if necessary
 if flip_ud
     zTopo = flipud(zTopo);
@@ -264,7 +255,6 @@ if flip_lr
     kTopoAll = fliplr(kTopoAll);
 end
 
-
 function [NODE, EDGE] = getNodeAndEdge(x, y)
     % getNodeAndEdge creates the NODE and EDGE arrays from x and y coordinates.
     %
@@ -275,15 +265,11 @@ function [NODE, EDGE] = getNodeAndEdge(x, y)
     % Outputs:
     %   NODE - An Mx2 array of the polygon's vertices
     %   EDGE - A Px2 array of edge indexing
-
     % Combine x and y into NODE array
     NODE = [x(:), y(:)];
-
     % Create EDGE array
     numVertices = length(x);
     EDGE = [1:numVertices; 2:numVertices+1]';
     EDGE(end) = 1;
-
 end
-
 end

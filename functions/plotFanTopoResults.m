@@ -36,7 +36,10 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     % Plot color difference map
     pcolor(xMesh, yMesh, zDiff)
     shading flat
+    
     colormap("turbo")
+    clim([0 max(zDiff(:))])
+    freezeColors
 
     % Calculate fan volume
     fanVolume = sum(zDiff, 'all', 'omitnan') * (xMesh(1,2) - xMesh(1,1)).^2;
@@ -50,7 +53,10 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     plot(xApex, yApex, 'r.', 'MarkerSize', 8)
 
     % Set color limits and colorbar
+<<<<<<< HEAD
     % clim([min(clim_value), max(clim_value)])
+=======
+>>>>>>> e9e2e9f3c0d1482e9489d9a2c02ebcff039a30ed
     c = colorbar;
     ylabel(c,'\Delta z (m)')
 
