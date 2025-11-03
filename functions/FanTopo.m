@@ -126,7 +126,7 @@ for jj = 1:length(zApexM)
                 % update fan surface to the visible sector occluded by boundar surface and other fan sectors:
                 [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
 
-                [isVisible, onVisible] = inpolygon_optimized(xMesh, yMesh, xVisi, yVisi);
+                [isVisible, onVisible] = inpolygon_cuda_mex(xMesh(1,:), yMesh(:,1), xVisi, yVisi);
                 isVisible = isVisible | onVisible;
                 
                 mask = isVisible & (zCone > zTopo | isnan(zTopo));                
@@ -178,9 +178,13 @@ for jj = 1:length(zApexM)
                 end
                 % remove buried apexes
                 if sum(~isnan(zTopo(:))) <= 4 % To prevent only two points in the grid have value and zAtopo become NaN
-                    zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2),"nearest");
+                    %zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2),"nearest");
+                    zAtopo = mean(zTopo(:), 'omitmissing');
                 else
                     zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
+                end
+                if isnan(zAtopo)
+                    sum(~isnan(zTopo(:)))
                 end
                 zAtopo_vale = coneFunction(zAtopo,sqrt(2)*dxMesh*2, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
                 xyzkApex(xyzkApex(:,3)<zAtopo_vale,:) = [];
