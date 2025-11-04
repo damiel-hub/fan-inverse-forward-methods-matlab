@@ -1,7 +1,7 @@
 function zCone = coneFunction(zApex,D,options)
     arguments
-        zApex double
-        D double
+        zApex
+        D
         options.caseName = 'cone'
         options.tanAlpha = nan
         options.K = nan

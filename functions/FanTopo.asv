@@ -73,7 +73,7 @@ zMesh = ones(size(xMesh))*zMax;
 zMesh(2:end-1,2:end-1) = zMesh0;
 zMesh(isnan(zMesh)) = zMax;
 
-F = griddedInterpolant(xMesh', yMesh', zMesh');
+F = griddedInterpolant(xMesh, yMesh, zMesh);
 
 % initialize topography and sorted apex list:
 xyzkApexAll = [];
@@ -114,7 +114,7 @@ for jj = 1:length(zApexM)
             xContour = C(1,:)'; xContour(kNan) = nan; xContour(1) = [];
             yContour = C(2,:)'; yContour(kNan) = nan; yContour(1) = [];
 
-            [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon_optimized(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/5,0);
+            [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/5,0);
 
             if length(xVisi)>5 % ignore the apex whose impact is too small
                 
@@ -182,7 +182,7 @@ for jj = 1:length(zApexM)
                     %zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2),"nearest");
                     zAtopo = mean(zTopo(:), 'omitmissing');
                 else
-                    F.Values = zTopo';
+                    F.Values = zTopo;
                     zAtopo = F(xyzkApex(:,1),xyzkApex(:,2));
                     % zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
                 end

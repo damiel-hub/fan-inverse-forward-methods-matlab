@@ -103,8 +103,10 @@ yApex = yMesh_crop(iApex);
 
 
 zApex = interp1(fitting_s_z_within_boundary(:,1), fitting_s_z_within_boundary(:,2), 0);
-[zTopo,~,~,~,~,~] = FanTopo(xMesh, yMesh, zMesh_pre, xApex, yApex, zApex, "caseName", 'myProfile', 'dz_interpM', {fitting_s_z_within_boundary});
 
+tic
+[zTopo,~,~,~,~,~] = FanTopo(xMesh, yMesh, zMesh_pre, xApex, yApex, zApex, "caseName", 'myProfile', 'dz_interpM', {fitting_s_z_within_boundary});
+toc
 %%
 % Plot results
 plotFanTopoResults(xMesh, yMesh, zTopo, zMesh_pre, xApex, yApex); % Volume within simulation area

@@ -1,7 +1,11 @@
-function [xVisi,yVisi,xEffCorner,yEffCorner] = visiPolygon(xBoundary,yBoundary,xApex,yApex,threshold,dispflag)
+function [xVisi,yVisi,xEffCorner,yEffCorner] = visiPolygon_optimized(xBoundary,yBoundary,xApex,yApex,threshold,dispflag)
 %VISIPOLYGON calculates the visibility polygon of an apex in the given
 % polygon
+%
 % >> [xVisi,yVisi,xEffCorner,yEffCorner] = visiPolygon(xBoundary,yBoundary,xApex,yApex,threshold,dispflag)
+%
+% This is an optimized version that avoids growing arrays in loops.
+%
 % Inputs:
 % [xBoundary,yBoundary] = x, y coordinates of boundary vertices, vertices
 % of various cycles of edges are seperated by NaN. A closed region is
@@ -14,9 +18,10 @@ function [xVisi,yVisi,xEffCorner,yEffCorner] = visiPolygon(xBoundary,yBoundary,x
 % Outputs:
 % [xVisi,yVisi] = x, y coordinates of the visibility polygon of the apex
 % [xEffCorner,yEffCorner] = x, y coordinates of the effective corners
+%
+% H. Capart, 2018/10/26; revised by T.Y.K. Chen, 2020/05/16
+% Optimized by pre-allocation, 2025
 
-% H. Capart, 2018/10/26; revised by T.Y.K. Chen, 2020/05/16 to include
-% special cases like aligned vertices
 %% construct doubly linked list of vertices:
 xBoundary = xBoundary(:);
 yBoundary = yBoundary(:);
@@ -61,7 +66,6 @@ if isempty(closeBoundaryID)
         return;
     end
 end
-
 nVertex = mVertex + length(xyBoundary{closeBoundaryID}) - 1;
 xVertex(mVertex:nVertex) = xyBoundary{closeBoundaryID}(:,1);
 yVertex(mVertex:nVertex) = xyBoundary{closeBoundaryID}(:,2);
@@ -70,7 +74,6 @@ kNext(mVertex:nVertex) = [(mVertex+1:nVertex), mVertex]';
 mBoundary(closeBoundaryID) = mVertex;
 nBoundary(closeBoundaryID) = nVertex;
 mVertex = nVertex+1;
-
 for kCycle = cwID
     if length(xyBoundary{kCycle})>=3
         isInPoly = inpolygon(xyBoundary{kCycle}(1,1),xyBoundary{kCycle}(1,2),xyBoundary{closeBoundaryID}(:,1),xyBoundary{closeBoundaryID}(:,2));
@@ -91,7 +94,6 @@ xVertex(mVertex:end) = [];
 yVertex(mVertex:end) = [];
 kNext(mVertex:end) = [];
 kPrev(mVertex:end) = [];
-
 if isempty(xVertex)
     xVisi=[];yVisi=[];xEffCorner = [];yEffCorner = [];
     return;
@@ -112,7 +114,6 @@ distEdge = sqrt( (xApex-xEdge).^2 + (yApex-yEdge).^2 ); % distance from the Apex
 isOnEdge = (mu>0)&(mu<1);
 distEdge(~isOnEdge) = Inf;
 [distMinEdge,kNearestEdge] = min(distEdge);
-
 isInApex = inpolygon(xApex,yApex,xBoundary,yBoundary);
 if isInApex % Apex in polygon
     if distMinVertex < 10^-1*threshold
@@ -191,7 +192,6 @@ else % Apex outside polygon
         return;
     end
 end
-
 if dispflag
     figure
     plot([xVertex,xVertex(kNext)]',[yVertex,yVertex(kNext)]','k-')
@@ -200,6 +200,17 @@ if dispflag
     axis equal
     axis tight
 end
+
+% --- OPTIMIZATION 1: Vertex-to-Boundary Map ---
+% Create a lookup map to avoid repeated 'find' calls inside loops
+% This maps each vertex index to its boundary cycle index
+nAllVertices = length(xVertex); % Get size *before* pre-allocation
+kVertexToBoundary = zeros(nAllVertices, 1);
+for k = 1:length(mBoundary)
+    kVertexToBoundary(mBoundary(k):nBoundary(k)) = k;
+end
+% --- END OPTIMIZATION 1 ---
+
 %% find corners
 tol_parallel = -10^-10; %tolerance for parallel edge and sightline
 uRay = xVertex-xApex;
@@ -221,6 +232,40 @@ dLC_Apex = sqrt(uRay(isLeftCorner).^2+vRay(isLeftCorner).^2);
 [~,LCsort] = sort(dLC_Apex);
 kRightCorner = kRightCorner(RCsort);
 kLeftCorner = kLeftCorner(LCsort);
+
+% --- OPTIMIZATION 2: Pre-allocation ---
+% Pre-allocate arrays to avoid growing them inside loops.
+% This is the most significant performance improvement.
+% Each corner-to-intersection link can add at most 3 new vertices.
+nMaxNewVertices = 3 * (length(kRightCorner) + length(kLeftCorner));
+nOldVertices = length(xVertex);
+
+% --- FIX 4: Only resize if new vertices are actually possible ---
+if nMaxNewVertices > 0
+    nTotalVertices = nOldVertices + nMaxNewVertices;
+
+    % Resize arrays once by assigning to the last projected element
+    xVertex(nTotalVertices, 1) = 0;
+    yVertex(nTotalVertices, 1) = 0;
+    kNext(nTotalVertices, 1) = 0;
+    kPrev(nTotalVertices, 1) = 0;
+    
+    % Update vertex-to-boundary map for the *full* pre-allocated size
+    % New vertices will inherit the boundary ID of the corner they came from.
+    % This is a simplification; we only *really* need the map for kCorner.
+    % The original map is sufficient.
+    kVertexToBoundary(nTotalVertices, 1) = 0;
+    kVertexToBoundary(1:nOldVertices) = kVertexToBoundary(1:nOldVertices);
+else
+    nTotalVertices = nOldVertices; % Unused, but explicit
+end
+% --- END FIX 4 ---
+
+
+% Use a counter for the next available vertex slot
+mVertex = nOldVertices + 1;
+% --- END OPTIMIZATION 2 ---
+
 isleapRC = false(size(kRightCorner)); % if corner and intersection point lie on various cycles of edge
 isleapLC = false(size(kLeftCorner));
 isPassedRC = false(size(kRightCorner)); % if the right corner is passed by sightline of apex to other right corner
@@ -229,50 +274,102 @@ kRCAdded = zeros(size(kRightCorner)); % index of the added vertex at the corner 
 kLCAdded = zeros(size(kLeftCorner));
 %% link right corners to intersection points
 tolmu = -10^-10; %tolerance for passing through a vertex
+
+% --- FIX 2 & 3 ---
+% Define ALL valid-range vectors *before* either loop runs,
+% so they are not contaminated by new vertices.
+kNext_valid = kNext(1:nOldVertices);
+kPrev_valid = kPrev(1:nOldVertices);
+xVertex_valid = xVertex(1:nOldVertices);
+yVertex_valid = yVertex(1:nOldVertices);
+
+% Pre-calculate vectors for Right Corner loop
+uNext_R = xVertex_valid(kNext_valid) - xVertex_valid;
+vNext_R = yVertex_valid(kNext_valid) - yVertex_valid;
+dNext_R = sqrt(uNext_R.^2+vNext_R.^2);
+
+% Pre-calculate vectors for Left Corner loop
+uPrev_L = xVertex_valid(kPrev_valid) - xVertex_valid;
+vPrev_L = yVertex_valid(kPrev_valid) - yVertex_valid;
+dPrev_L = sqrt(uPrev_L.^2+vPrev_L.^2);
+% --- END FIX 2 & 3 ---
+
 for i = 1:length(kRightCorner)
     if ~isPassedRC(i)
         kCorner = kRightCorner(i);
-        kBoundary = find(mBoundary<=kCorner,1,'last');
+        % Use O(1) lookup map instead of O(logN) find
+        kBoundary = kVertexToBoundary(kCorner); 
+        
         uRay = xVertex(kCorner) - xApex;
         vRay = yVertex(kCorner) - yApex;
-        uNext = xVertex(kNext) - xVertex;
-        vNext = yVertex(kNext) - yVertex;
-        dNext = sqrt(uNext.^2+vNext.^2);
-        detIntersect = -uRay*vNext + vRay*uNext;
+        
+        % --- FIX for Pre-allocation Error ---
+        % Use the vectors defined *before* the loop
+        detIntersect = -uRay*vNext_R + vRay*uNext_R;
         detIntersect(abs(detIntersect)<abs(tol_parallel)) = 0;
-        lambda = ( -(xVertex-xApex).*vNext + (yVertex-yApex).*uNext )./detIntersect;
-        mu = ( uRay.*(yVertex-yApex) - vRay.*(xVertex-xApex) )./detIntersect;
-        isIntersect = (mu>=tolmu)&(mu<1+tolmu)&lambda>1&dNext>0;
+        
+        lambda = ( -(xVertex_valid-xApex).*vNext_R + (yVertex_valid-yApex).*uNext_R )./detIntersect;
+        mu = ( uRay.*(yVertex_valid-yApex) - vRay.*(xVertex_valid-xApex) )./detIntersect;
+        
+        % Vectorized intersection check (on all vertices up to original size)
+        isIntersect = (mu>=tolmu) & (mu<1+tolmu) & (lambda>1) & (dNext_R>0);
+        % --- END FIX ---
+        
         isIntersect([kApex,kPrev(kApex),kCorner,kPrev(kCorner)])=0;
-        lambdaIntersect = lambda(isIntersect);
-        kIntersect = find(isIntersect);
+        
+        kIntersectIdx = find(isIntersect);
+        if isempty(kIntersectIdx)
+            lambdaIntersect = [];
+        else
+            lambdaIntersect = lambda(kIntersectIdx);
+        end
+        
         if dispflag
             plot(xVertex(kCorner),yVertex(kCorner),'k>','markerfacecolor','k','markersize',3)
         end
+        
         if ~isempty(lambdaIntersect)
             [lambdaMin,jMin] = min(lambdaIntersect);
-            kMin = kIntersect(jMin);
+            kMin = kIntersectIdx(jMin);
             alignedRCi = find(kRightCorner==kMin);
             while ~isempty(alignedRCi) % intersection point is another right corner
-                kIntersect(jMin)=[];
+                kIntersectIdx(jMin)=[];
                 lambdaIntersect(jMin)=[];
                 isPassedRC(alignedRCi) = 1;
+                if isempty(lambdaIntersect)
+                    kMin = [];
+                    break;
+                end
                 [lambdaMin,jMin] = min(lambdaIntersect);
-                kMin = kIntersect(jMin);
+                kMin = kIntersectIdx(jMin);
                 alignedRCi = find(kRightCorner==kMin);
             end
-            isleapRC(i) = kBoundary ~=find(mBoundary<=kMin,1,'last');
+            
+            if isempty(kMin)
+                continue; % All intersections were other corners
+            end
+
+            % Use O(1) lookup map
+            isleapRC(i) = kBoundary ~= kVertexToBoundary(kMin);
+            
             xIntersect = xApex + lambdaMin*uRay;
             yIntersect = yApex + lambdaMin*vRay;
+            
             if dispflag
                 plot([xVertex(kCorner),xIntersect],[yVertex(kCorner),yIntersect],'k:')
                 plot(xIntersect,yIntersect,'k>','markerfacecolor','w','markersize',4)
             end
-            kIntersect = length(xVertex) + 1;
-            kRCAdded(i) = kIntersect + 1;
-            if abs(mu(kMin))<=abs(tolmu) % intersection point is a vertex
-                xVertex = [xVertex; xIntersect; xVertex(kCorner)];
-                yVertex = [yVertex; yIntersect; yVertex(kCorner)];
+            
+            % --- OPTIMIZATION: Use pre-allocated slots ---
+            kIntersect = mVertex; % Get next available slot
+            kRCAdded(i) = mVertex + 1;
+            
+            if abs(mu(kMin))<=abs(tolmu) % intersection point is a vertex (2 new vertices)
+                xVertex(kIntersect) = xIntersect;
+                yVertex(kIntersect) = yIntersect;
+                xVertex(kIntersect+1) = xVertex(kCorner);
+                yVertex(kIntersect+1) = yVertex(kCorner);
+                
                 kPrev(kNext(kCorner)) = kIntersect + 1;
                 kNext(kIntersect+1) = kNext(kCorner);
                 kPrev(kIntersect+1) = kMin;
@@ -283,9 +380,15 @@ for i = 1:length(kRightCorner)
                 kPrev(kNext(kMin)) = kIntersect;
                 
                 kNext(kMin) = kIntersect + 1;
-            else % intersection point lies on an edge
-                xVertex = [xVertex; xIntersect; xVertex(kCorner); xIntersect];
-                yVertex = [yVertex; yIntersect; yVertex(kCorner); yIntersect];
+                
+                mVertex = mVertex + 2; % Increment counter
+            else % intersection point lies on an edge (3 new vertices)
+                xVertex(kIntersect) = xIntersect;
+                yVertex(kIntersect) = yIntersect;
+                xVertex(kIntersect+1) = xVertex(kCorner);
+                yVertex(kIntersect+1) = yVertex(kCorner);
+                xVertex(kIntersect+2) = xIntersect;
+                yVertex(kIntersect+2) = yIntersect;
                 
                 kPrev(kNext(kCorner)) = kIntersect + 1;
                 kNext(kIntersect+1) = kNext(kCorner);
@@ -299,55 +402,95 @@ for i = 1:length(kRightCorner)
                 kNext(kMin) = kIntersect + 2;
                 kPrev(kIntersect+2) = kMin;
                 kNext(kIntersect+2) = kIntersect + 1;
+                
+                mVertex = mVertex + 3; % Increment counter
             end
+            % --- END OPTIMIZATION ---
         end
     end
 end
 %% link left corners to intersection points
+
+% --- FIX 2 ---
+% (Definitions moved before the right-corner loop)
+% --- END FIX 2 ---
+
 for i = 1:length(kLeftCorner)
     if ~isPassedLC(i)
         kCorner = kLeftCorner(i);
-        kBoundary = find(mBoundary<=kCorner,1,'last');
+        % Use O(1) lookup map
+        kBoundary = kVertexToBoundary(kCorner);
+        
         uRay = xVertex(kCorner) - xApex;
         vRay = yVertex(kCorner) - yApex;
-        uPrev = xVertex(kPrev) - xVertex;
-        vPrev = yVertex(kPrev) - yVertex;
-        dPrev = sqrt(uPrev.^2+vPrev.^2);
-        detIntersect = -uRay*vPrev + vRay*uPrev;
+        
+        % --- FIX for Pre-allocation Error ---
+        % Use the vectors defined *before* the loop
+        detIntersect = -uRay*vPrev_L + vRay*uPrev_L;
         detIntersect(abs(detIntersect)<10^-10) = 0;
-        lambda = ( -(xVertex-xApex).*vPrev + (yVertex-yApex).*uPrev )./detIntersect;
-        mu = ( uRay.*(yVertex-yApex) - vRay.*(xVertex-xApex) )./detIntersect;
-        isIntersect = (mu>=tolmu)&(mu<1+tolmu)&lambda>1&dPrev>0;
+
+        lambda = ( -(xVertex_valid-xApex).*vPrev_L + (yVertex_valid-yApex).*uPrev_L )./detIntersect;
+        mu = ( uRay.*(yVertex_valid-yApex) - vRay.*(xVertex_valid-xApex) )./detIntersect;
+        
+        % Vectorized intersection check (on all vertices up to original size)
+        isIntersect = (mu>=tolmu) & (mu<1+tolmu) & (lambda>1) & (dPrev_L>0);
+        % --- END FIX ---
+
         isIntersect([kApex,kNext(kApex),kCorner,kNext(kCorner)])=0;
-        lambdaIntersect = lambda(isIntersect);
-        kIntersect = find(isIntersect);
+
+        kIntersectIdx = find(isIntersect);
+        if isempty(kIntersectIdx)
+            lambdaIntersect = [];
+        else
+            lambdaIntersect = lambda(kIntersectIdx);
+        end
+
         if dispflag
             plot(xVertex(kCorner),yVertex(kCorner),'k<','markerfacecolor','k','markersize',3)
         end
+        
         if ~isempty(lambdaIntersect)
             [lambdaMin,jMin] = min(lambdaIntersect);
-            kMin = kIntersect(jMin);
+            kMin = kIntersectIdx(jMin);
             alignedLCi = find(kLeftCorner==kMin);
             while ~isempty(alignedLCi) % intersection point is another left corner
-                kIntersect(jMin)=[];
+                kIntersectIdx(jMin)=[];
                 lambdaIntersect(jMin)=[];
                 isPassedLC(alignedLCi) = 1;
+                if isempty(lambdaIntersect)
+                    kMin = [];
+                    break;
+                end
                 [lambdaMin,jMin] = min(lambdaIntersect);
-                kMin = kIntersect(jMin);
+                kMin = kIntersectIdx(jMin);
                 alignedLCi = find(kLeftCorner==kMin);
             end
-            isleapLC(i) = kBoundary ~=find(mBoundary<=kMin,1,'last');
+            
+            if isempty(kMin)
+                continue; % All intersections were other corners
+            end
+            
+            % Use O(1) lookup map
+            isleapLC(i) = kBoundary ~= kVertexToBoundary(kMin);
+            
             xIntersect = xApex + lambdaMin*uRay;
             yIntersect = yApex + lambdaMin*vRay;
+            
             if dispflag
                 plot([xVertex(kCorner),xIntersect],[yVertex(kCorner),yIntersect],'k:')
                 plot(xIntersect,yIntersect,'k<','markerfacecolor','w','markersize',4)
             end
-            kIntersect = length(xVertex) + 1;
-            kLCAdded(i) = kIntersect + 1;
-            if abs(mu(kMin))<=abs(tolmu) % intersection point is a vertex
-                xVertex = [xVertex; xIntersect; xVertex(kCorner)];
-                yVertex = [yVertex; yIntersect; yVertex(kCorner)];
+            
+            % --- OPTIMIZATION: Use pre-allocated slots ---
+            kIntersect = mVertex; % Get next available slot
+            kLCAdded(i) = mVertex + 1;
+            
+            if abs(mu(kMin))<=abs(tolmu) % intersection point is a vertex (2 new vertices)
+                xVertex(kIntersect) = xIntersect;
+                yVertex(kIntersect) = yIntersect;
+                xVertex(kIntersect+1) = xVertex(kCorner);
+                yVertex(kIntersect+1) = yVertex(kCorner);
+                
                 kNext(kPrev(kCorner)) = kIntersect + 1;
                 kPrev(kIntersect+1) = kPrev(kCorner);
                 kNext(kIntersect+1) = kMin;
@@ -358,9 +501,16 @@ for i = 1:length(kLeftCorner)
                 kPrev(kIntersect) = kPrev(kMin);
                 
                 kPrev(kMin) = kIntersect + 1;
-            else % intersection point lies on an edge
-                xVertex = [xVertex; xIntersect; xVertex(kCorner); xIntersect];
-                yVertex = [yVertex; yIntersect; yVertex(kCorner); yIntersect];
+                
+                mVertex = mVertex + 2; % Increment counter
+            else % intersection point lies on an edge (3 new vertices)
+                xVertex(kIntersect) = xIntersect;
+                yVertex(kIntersect) = yIntersect;
+                xVertex(kIntersect+1) = xVertex(kCorner);
+                yVertex(kIntersect+1) = yVertex(kCorner);
+                xVertex(kIntersect+2) = xIntersect;
+                yVertex(kIntersect+2) = yIntersect;
+
                 kNext(kPrev(kCorner)) = kIntersect + 1;
                 kPrev(kIntersect+1) = kPrev(kCorner);
                 kNext(kIntersect+1) = kIntersect + 2;
@@ -373,10 +523,25 @@ for i = 1:length(kLeftCorner)
                 kPrev(kMin) = kIntersect + 2;
                 kNext(kIntersect+2) = kMin;
                 kPrev(kIntersect+2) = kIntersect + 1;
+                
+                mVertex = mVertex + 3; % Increment counter
             end
+            % --- END OPTIMIZATION ---
         end
     end
 end
+
+% --- OPTIMIZATION 3: Trim pre-allocated arrays ---
+% Remove the unused, pre-allocated space
+% --- FIX 4: Only trim if we actually resized ---
+if nMaxNewVertices > 0
+    xVertex(mVertex:end) = [];
+    yVertex(mVertex:end) = [];
+    kNext(mVertex:end) = [];
+    kPrev(mVertex:end) = [];
+end
+% --- END FIX 4 & OPTIMIZATION 3 ---
+
 %% obtain vertices of the visibility polygon
 % loop around starting from Apex:
 kVisi = kApex;
@@ -386,22 +551,18 @@ end
 kVisi = [kVisi; kNext(kVisi(end))];
 xVisi = xVertex(kVisi);
 yVisi = yVertex(kVisi);
-
 %% obtain effective corners (children apexes)
 % if 0
 xRightCorner = xVertex(kRightCorner);
 xLeftCorner = xVertex(kLeftCorner);
 yRightCorner = yVertex(kRightCorner);
 yLeftCorner = yVertex(kLeftCorner);
-
 % find corners on the visibility polygon:
 isRCOnVisi = inpolygon(xRightCorner,yRightCorner,xVisi,yVisi);
 isLCOnVisi = inpolygon(xLeftCorner,yLeftCorner,xVisi,yVisi);
-
 % remove corners with small influences:
 kPendingRC = kRCAdded(~isleapRC & isRCOnVisi & kRCAdded~=0 & ~isPassedRC);
 kPendingLC = kLCAdded(~isleapLC & isLCOnVisi & kLCAdded~=0 & ~isPassedLC);
-
 for i = 1:length(kPendingRC)
     kRemovedPolygon = kPendingRC(i);
     while kNext(kRemovedPolygon(end))~=kPendingRC(i)
@@ -412,7 +573,6 @@ for i = 1:length(kPendingRC)
         kPendingRC(i) = nan;
     end
 end
-
 for i = 1:length(kPendingLC)
     kRemovedPolygon = kPendingLC(i);
     while kNext(kRemovedPolygon(end))~=kPendingLC(i)
@@ -423,12 +583,10 @@ for i = 1:length(kPendingLC)
         kPendingLC(i) = nan;
     end
 end
-
 xEffCorner = [xVertex(kRightCorner(isleapRC & isRCOnVisi & ~isPassedRC));xVertex(kPendingRC(~isnan(kPendingRC)));...
     xVertex(kLeftCorner(isleapLC & isLCOnVisi & ~isPassedLC));xVertex(kPendingLC(~isnan(kPendingLC)))];
 yEffCorner = [yVertex(kRightCorner(isleapRC & isRCOnVisi & ~isPassedRC));yVertex(kPendingRC(~isnan(kPendingRC)));...
     yVertex(kLeftCorner(isleapLC & isLCOnVisi & ~isPassedLC));yVertex(kPendingLC(~isnan(kPendingLC)))];
-
 if dispflag
     plot(xEffCorner,yEffCorner,'r^')
     plot(xVisi,yVisi,'r-')
@@ -449,3 +607,7 @@ end
 %     save errordata xBoundary yBoundary xApex yApex threshold dispflag
 % end
 end
+
+
+
+
