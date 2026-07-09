@@ -32,7 +32,8 @@ function [zTopo,kTopoAll,xyzkApexAll,xyzVisPolygon,xyVisPolygonAll,thetaMesh] = 
 % xyVisPolygonAll - Matrix of `x` and `y` coordinates for all visibility polygons. Only generated if `saveVisPolygon` is set to `1`.
 % thetaMesh - 2D matrix of angular distribution relative to apex(es).
 % Tzu-Yin Kasha Chen, March 2019; modified Aug 2022
-% Yuan-Hung Chiu modified Aug 2024
+% Yuan-Hung Chiu modified Aug 2024; modified Dec 2025
+
 arguments
     xMesh double
     yMesh double
@@ -49,176 +50,236 @@ arguments
     options.saveVisPolygon = 0
     options.runthetaMesh = 0
 end
-% Expand the x and y coordinates while preserving the order
+
+% 1. Grid Pre-processing
 flip_lr = xMesh(1,1) > xMesh(1,end);
 flip_ud = yMesh(1,1) > yMesh(end,1);
-if flip_lr
-    xMesh = fliplr(xMesh);
-    zMesh = fliplr(zMesh);
-end
-if flip_ud
-    yMesh = flipud(yMesh);
-    zMesh = flipud(zMesh);
-end
-% add a high wall around the domain
+if flip_lr; xMesh = fliplr(xMesh); zMesh = fliplr(zMesh); end
+if flip_ud; yMesh = flipud(yMesh); zMesh = flipud(zMesh); end
+
+% Add a high wall around the domain
 xMin = min(min(xMesh)); xMax = max(max(xMesh));
 yMin = min(min(yMesh)); yMax = max(max(yMesh));
 zMin = min(min(zMesh)); zMax = max(max(zMesh));
 zMax = max(max(zApexM),zMax);
 zMesh0 = zMesh;
+
+% Calculate Grid Spacing
 dxMesh = (xMax-xMin)/(size(xMesh,2)-1);
 dyMesh = (yMax-yMin)/(size(yMesh,1)-1);
 [xMesh,yMesh] = meshgrid((xMin-dxMesh):dxMesh:(xMax+dxMesh),(yMin-dyMesh):dyMesh:(yMax+dyMesh));
 zMesh = ones(size(xMesh))*zMax;
 zMesh(2:end-1,2:end-1) = zMesh0;
 zMesh(isnan(zMesh)) = zMax;
-
 F = griddedInterpolant(xMesh', yMesh', zMesh');
 
-% initialize topography and sorted apex list:
+% =========================================================================
+% DYNAMIC CONFIGURATION BLOCK
+% =========================================================================
+avg_dMesh = (dxMesh + dyMesh) / 2;
+
+config = struct();
+% Level to determine "intersection" with the ground (was 0 or 1e-6)
+config.contourLevel = 1e-6; 
+
+% Minimum nodes to consider a polygon valid (was 5)
+config.minNodeCount = 5; 
+
+% Threshold for visibility polygon simplification (was min(dx,dy)/2)
+config.visiThreshold = avg_dMesh / 2;
+
+% Minimum distance a new child apex must be from the visibility boundary.
+% Previously: sqrt(2)*dxMesh*2 (~2.8*dx). 
+% If this is too small, infinite tiny steps occur.
+config.minDistFromBoundary = 3.0 * avg_dMesh; 
+
+% Minimum separation between a new apex and existing apexes to merge them.
+% Previously: derived dynamically from min_d_xyVisi/4
+config.minApexSeparation = avg_dMesh / 2; 
+
+% Tolerance for checking if x or y coordinates align (Grid snapping).
+% Previously: dxMesh/8
+config.alignmentTol = avg_dMesh / 10;
+% =========================================================================
+
+% Initialize Output
 xyzkApexAll = [];
 kTopoAll = nan(size(zMesh));
 xyzVisPolygon = {};
 xyVisPolygonAll = [];
-if ~options.dispflag
-    figure;
-    axis equal;
-    axis([xMin, xMax, yMin, yMax]);
-    clim([zMin, zMax]);
-end
 zTopo = nan(size(zMesh));
 thetaMesh = nan(size(zMesh));
+
+if ~options.dispflag
+    figure; axis equal; axis([xMin, xMax, yMin, yMax]); clim([zMin, zMax]);
+end
+
 for jj = 1:length(zApexM)
     kTopo = zeros(size(zMesh));
     xyzkApex = [xApexM(jj), yApexM(jj), zApexM(jj), nan];
     kApex = 1;
     
-    % loop over apexes:
-    while kApex<= size(xyzkApex,1)
-        %%
-        % select active apex:
+    % Loop over apexes (Main Simulation Loop)
+    while kApex <= size(xyzkApex,1)
+        
+        % Select active apex
         xApex = xyzkApex(kApex,1);
         yApex = xyzkApex(kApex,2);
         zApex = xyzkApex(kApex,3);
         
-        % find intersection polygon of cone surface and boundary surface:
+        % Calculate Cone Surface
         D = sqrt( (xMesh-xApex).^2 + (yMesh-yApex).^2 );
         zCone = coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
-        C = contour(xMesh,yMesh,zCone-zMesh,[0,0],'Visible','off');
-        n_nodes = C(2,C(1,:)==0);
-        if max(n_nodes)>5 % ignore the apex whose impact is too small
-            kNan = 1;
-            while(kNan(end)+C(2,kNan(end))<size(C,2))
-                kNan = [kNan;kNan(end)+C(2,kNan(end))+1];
+        
+        % Find intersection polygon (Cone vs Boundary)
+        % Using config.contourLevel instead of 0 for consistency
+        C = contour(xMesh,yMesh,zCone-zMesh,[config.contourLevel, config.contourLevel],'Visible','off');
+        
+        hasNodes = ~isempty(C) && size(C,2) > 1;
+        
+        if hasNodes
+            % Parse contour matrix C
+            n_nodes_vec = [];
+            idx = 1; 
+            kNan = [];
+            while idx < size(C,2)
+                len = C(2, idx);
+                n_nodes_vec = [n_nodes_vec, len];
+                kNan = [kNan; idx + len + 1];
+                idx = idx + len + 1;
             end
-            xContour = C(1,:)'; xContour(kNan) = nan; xContour(1) = [];
-            yContour = C(2,:)'; yContour(kNan) = nan; yContour(1) = [];
-
-            [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon_optimized(xContour,yContour,xApex,yApex,min(dxMesh,dyMesh)/5,0);
-
-            if length(xVisi)>5 % ignore the apex whose impact is too small
+            kNan(kNan > size(C,2)) = [];
+            
+            % Check if the contour is large enough to matter
+            if max(n_nodes_vec) > config.minNodeCount
+                xContour = C(1,:)'; xContour(kNan) = nan; xContour(1) = [];
+                yContour = C(2,:)'; yContour(kNan) = nan; yContour(1) = [];
                 
-                if options.saveVisPolygon
-                    D_Visi = sqrt( (xVisi-xApex).^2 + (yVisi-yApex).^2 );
-                    zVisi = coneFunction(zApex,D_Visi, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
-                    xyzVisPolygon{end+1} = [xVisi yVisi zVisi];
-                end
+                % Compute Visibility Polygon using dynamic threshold
+                [xVisi,yVisi,xChildApex,yChildApex] = visiPolygon_optimized(xContour,yContour,xApex,yApex, config.visiThreshold, 0);
                 
-                % update fan surface to the visible sector occluded by boundar surface and other fan sectors:
-                [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
-
-                [isVisible, onVisible] = inpolygon_mex_v23(xMesh(1,:), yMesh(:,1), xVisi, yVisi);
-                isVisible = isVisible | onVisible;
-                
-                mask = isVisible & (zCone > zTopo | isnan(zTopo));                
-                
-                zTopo(mask) = zCone(mask);
-                kTopo(zCone==zTopo) = kApex;
-                if options.runthetaMesh
-                    thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
-                    thetaMesh(mask) = thetaMesh_temp(mask);
-                end
-                
-                if options.saveVisPolygon
-                    if isempty(xyVisPolygonAll)
-                        xyVisPolygonAll = [xVisi, yVisi];
-                    else
-                        isVisible = inpoly2([xyVisPolygonAll(:,1), xyVisPolygonAll(:,2)], NODE, EDGE);
-                        xyVisPolygonAll(isVisible, :) = [];
-                        xyVisPolygonAll = [xyVisPolygonAll; [xVisi, yVisi]];
+                if length(xVisi) > config.minNodeCount
+                    
+                    if options.saveVisPolygon
+                        D_Visi = sqrt( (xVisi-xApex).^2 + (yVisi-yApex).^2 );
+                        zVisi = coneFunction(zApex,D_Visi, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
+                        xyzVisPolygon{end+1} = [xVisi yVisi zVisi];
                     end
-                end
-                % add effective children apexes into the apex list
-                CTopo = contourc(xMesh(1,:),yMesh(:,1),kTopo,[1e-6,1e-6]); % the boundary of previous visibility polygons
-                CTopo(:,CTopo(1,:)==1e-6) = [];
-                min_d_xyVisi = min(sqrt((diff(xVisi).^2+diff(yVisi).^2))); % threshold for finding the semi-apexes that are too close
-                D = sqrt( (xChildApex-xApex).^2 + (yChildApex-yApex).^2 );
-                zConeChildApex = coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
-                for i = 1:length(xChildApex)
-                    dist_CTopo = min(sqrt((CTopo(1,:)-xChildApex(i)).^2+(CTopo(2,:)-yChildApex(i)).^2));
-                    if dist_CTopo < sqrt(2)*dxMesh*2 % only keep the semi-apex that close to the boundary of previous visibility polygons
-                        dx_existChildApex = xyzkApex(:,1)-xChildApex(i);
-                        dy_existChildApex = xyzkApex(:,2)-yChildApex(i);
-                        ds_existChildApex = sqrt(dx_existChildApex.^2+(dy_existChildApex).^2); % distance to existing semi-apexes
-                        isTooClose = find(ds_existChildApex < min_d_xyVisi/4); % find the existing semi-apexes that are too close to the new semi-apex
-                        isTooClose(isTooClose == kApex) = [];
-                        isSameXorY = find((dx_existChildApex==0 & abs(dy_existChildApex)<dyMesh/8) | (abs(dx_existChildApex)<dxMesh/8 & dy_existChildApex==0)); % find the existing semi-apexes that have the same x or y cordination as the new semi-apex
-                        isSameXorY(isSameXorY == kApex) = [];
-                        if ~isempty(isTooClose) || ~isempty(isSameXorY)
-                            % update the z value of the too-close/sameXorY existing semi-apexes
-                            D = sqrt((xyzkApex(isTooClose,1)-xApex).^2+(xyzkApex(isTooClose,2)-yApex).^2);
-                            xyzkApex(isTooClose,3) = max(xyzkApex(isTooClose,3), coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj}));
-                            D = sqrt((xyzkApex(isSameXorY,1)-xApex).^2+(xyzkApex(isSameXorY,2)-yApex).^2);
-                            xyzkApex(isSameXorY,3) = max(xyzkApex(isSameXorY,3), coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj}));
+                    
+                    % Update fan surface
+                    [NODE, EDGE] = getNodeAndEdge(xVisi, yVisi);
+                    [isVisible, onVisible] = inpolygon_mex_v23(xMesh(1,:), yMesh(:,1), xVisi, yVisi);
+                    isVisible = isVisible | onVisible;
+                    
+                    mask = isVisible & (zCone > zTopo | isnan(zTopo));                
+                    zTopo(mask) = zCone(mask);
+                    kTopo(zCone==zTopo) = kApex;
+                    
+                    if options.runthetaMesh
+                        thetaMesh_temp = atan2(xMesh - xApex, yMesh - yApex);
+                        thetaMesh(mask) = thetaMesh_temp(mask);
+                    end
+                    
+                    if options.saveVisPolygon
+                        if isempty(xyVisPolygonAll)
+                            xyVisPolygonAll = [xVisi, yVisi];
                         else
-                            % add new semi-apex
-                            zChildApex = zConeChildApex(i);
-                            xyzkApex = [xyzkApex; xChildApex(i) yChildApex(i) zChildApex kApex];
+                            isVisible = inpoly2([xyVisPolygonAll(:,1), xyVisPolygonAll(:,2)], NODE, EDGE);
+                            xyVisPolygonAll(isVisible, :) = [];
+                            xyVisPolygonAll = [xyVisPolygonAll; [xVisi, yVisi]];
                         end
                     end
-                end
-                % remove buried apexes
-                if sum(~isnan(zTopo(:))) <= 4 % To prevent only two points in the grid have value and zAtopo become NaN
-                    %zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2),"nearest");
-                    zAtopo = mean(zTopo(:), 'omitmissing');
+                    
+                    % -----------------------------------------------------
+                    % ADD CHILD APEXES (Using Dynamic Tolerances)
+                    % -----------------------------------------------------
+                    % Get boundary of current visibility
+                    CTopo = contourc(xMesh(1,:),yMesh(:,1),kTopo,[config.contourLevel, config.contourLevel]); 
+                    CTopo(:,CTopo(1,:)==config.contourLevel) = [];
+                    
+                    if ~isempty(CTopo) && size(CTopo, 2) > 0
+                        
+                        D = sqrt( (xChildApex-xApex).^2 + (yChildApex-yApex).^2 );
+                        zConeChildApex = coneFunction(zApex,D, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
+                        
+                        for i = 1:length(xChildApex)
+                            % Distance to the previous boundary
+                            dist_CTopo = min(sqrt((CTopo(1,:)-xChildApex(i)).^2+(CTopo(2,:)-yChildApex(i)).^2));
+                            
+                            % STABILITY FIX: Use config.minDistFromBoundary
+                            % Ensures we don't create children too close to the edge (micro-stepping)
+                            if dist_CTopo < config.minDistFromBoundary 
+                                
+                                dx_exist = xyzkApex(:,1)-xChildApex(i);
+                                dy_exist = xyzkApex(:,2)-yChildApex(i);
+                                ds_exist = sqrt(dx_exist.^2 + dy_exist.^2); 
+                                
+                                % STABILITY FIX: Use config.minApexSeparation
+                                isTooClose = find(ds_exist < config.minApexSeparation); 
+                                isTooClose(isTooClose == kApex) = [];
+                                
+                                % STABILITY FIX: Use config.alignmentTol for robust coordinate comparison
+                                isSameXorY = find((abs(dx_exist) < eps & abs(dy_exist) < config.alignmentTol) | ...
+                                                  (abs(dx_exist) < config.alignmentTol & abs(dy_exist) < eps));
+                                isSameXorY(isSameXorY == kApex) = [];
+                                
+                                if ~isempty(isTooClose) || ~isempty(isSameXorY)
+                                    % Update existing apexes (merge)
+                                    idx_update = unique([isTooClose; isSameXorY]);
+                                    D_exist = sqrt((xyzkApex(idx_update,1)-xApex).^2+(xyzkApex(idx_update,2)-yApex).^2);
+                                    z_new = coneFunction(zApex,D_exist, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
+                                    xyzkApex(idx_update,3) = max(xyzkApex(idx_update,3), z_new);
+                                else
+                                    % Add new semi-apex
+                                    xyzkApex = [xyzkApex; xChildApex(i) yChildApex(i) zConeChildApex(i) kApex];
+                                end
+                            end
+                        end
+                    end
+                    
+                    % Remove buried apexes
+                    if sum(~isnan(zTopo(:))) <= 4 
+                        zAtopo = mean(zTopo(:), 'omitmissing');
+                    else
+                        F.Values = zTopo';
+                        zAtopo = F(xyzkApex(:,1),xyzkApex(:,2));
+                    end
+                    
+                    if isnan(zAtopo); zAtopo = NaN; end
+                    
+                    % STABILITY FIX: Use config.minDistFromBoundary for height check
+                    zAtopo_vale = coneFunction(zAtopo, config.minDistFromBoundary, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
+                    
+                    toRemove = xyzkApex(:,3) < zAtopo_vale;
+                    toRemove(isnan(toRemove)) = 0;
+                    xyzkApex(toRemove,:) = [];
+                    
+                    % Sort apexes by elevation
+                    if size(xyzkApex,1)>kApex
+                        xyzkApex(kApex+1:end,:) = sortrows(xyzkApex(kApex+1:end,:),3,'descend');
+                    end
                 else
-                    F.Values = zTopo';
-                    zAtopo = F(xyzkApex(:,1),xyzkApex(:,2));
-                    % zAtopo = interp2(xMesh,yMesh,zTopo,xyzkApex(:,1),xyzkApex(:,2));
-                end
-                if isnan(zAtopo)
-                    sum(~isnan(zTopo(:)))
-                end
-                zAtopo_vale = coneFunction(zAtopo,sqrt(2)*dxMesh*2, 'caseName', options.caseName,'tanAlpha', options.tanAlphaM(jj), 'K', options.KM(jj), 'zApex0', zApexM(jj), 'tanInfinite', options.tanInfiniteM(jj), 'dz_interp', options.dz_interpM{jj});
-                xyzkApex(xyzkApex(:,3)<zAtopo_vale,:) = [];
-                % sort the apexes by elevation
-                if size(xyzkApex,1)>kApex
-                    xyzkApex(kApex+1:end,:) = sortrows(xyzkApex(kApex+1:end,:),3,'descend');
+                    if options.saveVisPolygon; xyzVisPolygon{end+1} = [nan nan nan]; end
                 end
             else
-                if options.saveVisPolygon
-                    xyzVisPolygon{end+1} = [nan nan nan];
-                end
+                if options.saveVisPolygon; xyzVisPolygon{end+1} = [nan nan nan]; end
             end
         else
-            if options.saveVisPolygon
-                xyzVisPolygon{end+1} = [nan nan nan];
-            end
+            if options.saveVisPolygon; xyzVisPolygon{end+1} = [nan nan nan]; end
         end
-        % show topography, active fan contour, and visible sector and apexes:
+        
+        % Plotting
         if options.dispflag
-            % The background is already set and 'hold on' is active.
-            % We just need to plot the new data.
-            plot(xVisi, yVisi, 'g-');
-            plot(xApex, yApex, 'ko');
+            plot(xVisi, yVisi, 'g-'); plot(xApex, yApex, 'ko');
             plot(xyzkApex(:, 1), xyzkApex(:, 2), 'k.');
             plot(xChildApex, yChildApex, 'kv');
             title(['Apex no. ', int2str(kApex)]);
-            drawnow; % Force the graphics to update now
+            drawnow; 
         end
-        % proceed to next apex on the list:
+        
         kApex = kApex + 1;
     end
+    
     if jj>1
         xyzkApex(:,4) = xyzkApex(:,4)+size(xyzkApexAll,1);
         kTopoAll(kTopo>0)=kTopo(kTopo>0)+size(xyzkApexAll,1);
@@ -226,27 +287,20 @@ for jj = 1:length(zApexM)
         kTopoAll=kTopo;
     end
     xyzkApexAll = [xyzkApexAll;xyzkApex];
-    
     zMesh(~isnan(zTopo)) = zTopo(~isnan(zTopo));
 end
-if ~options.dispflag
-    close
-end
-% Remove the high wall
+
+if ~options.dispflag; close; end
+
+% Post-processing (remove walls and flip back)
 zTopo = zTopo(2:end-1, 2:end-1);
 thetaMesh = thetaMesh(2:end-1, 2:end-1);
 kTopoAll = kTopoAll(2:end-1, 2:end-1);
 kTopoAll(kTopoAll == 0) = nan;
-% Flip back if necessary
-if flip_ud
-    zTopo = flipud(zTopo);
-    thetaMesh = flipud(thetaMesh);
-    kTopoAll = flipud(kTopoAll);
-end
-if flip_lr
-    zTopo = fliplr(zTopo);
-    thetaMesh = fliplr(thetaMesh);
-    kTopoAll = fliplr(kTopoAll);
+
+if flip_ud; zTopo = flipud(zTopo); thetaMesh = flipud(thetaMesh); kTopoAll = flipud(kTopoAll); end
+if flip_lr; zTopo = fliplr(zTopo); thetaMesh = fliplr(thetaMesh); kTopoAll = fliplr(kTopoAll); end
+
 end
 
 function [NODE, EDGE] = getNodeAndEdge(x, y)
@@ -265,5 +319,4 @@ function [NODE, EDGE] = getNodeAndEdge(x, y)
     numVertices = length(x);
     EDGE = [1:numVertices; 2:numVertices+1]';
     EDGE(end) = 1;
-end
 end

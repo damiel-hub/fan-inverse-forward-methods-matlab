@@ -1,4 +1,4 @@
-function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval, clim_value)
+function plotFanTopoResultsRWB(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundarySHP, contourInterval, clim_value)
 
     if nargin < 7 || isempty(fanBoundarySHP)
         fanBoundarySHP = nan;
@@ -40,11 +40,11 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
     pcolor(xMesh, yMesh, zDiff)
     shading flat
     
-    colormap("turbo")
+    colormap(redwhiteblue(-clim_value, clim_value, 100))
     if isempty(clim_value)
         clim([0 max(zDiff(:))])
     else
-        clim([0 clim_value])
+        clim([-clim_value clim_value])
     end
     freezeColors
 
@@ -65,9 +65,9 @@ function plotFanTopoResults(xMesh, yMesh, zTopo, zMesh, xApex, yApex, fanBoundar
 
     % Plot contour
     if isscalar(contourInterval)
-        contour(xMesh, yMesh, zTopoFill, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k', 'LineWidth',0.1)
+        contour(xMesh, yMesh, zMesh, min(zTopoFill(:)):contourInterval:max(zTopoFill(:)), 'k', 'LineWidth',0.1)
     else
-        contour(xMesh, yMesh, zTopoFill, contourInterval, 'k', 'LineWidth',0.1)
+        contour(xMesh, yMesh, zMesh, contourInterval, 'k', 'LineWidth',0.1)
     end
     axis equal
 

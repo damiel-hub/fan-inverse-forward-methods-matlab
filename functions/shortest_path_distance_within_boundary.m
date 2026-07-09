@@ -1,12 +1,20 @@
-function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_crop, pltFlag)
+function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, zMesh_crop, pltFlag, xApex, yApex)
+% shortest_path_distance_within_boundary
+% Now accepts optional xApex and yApex arguments.
+% If they are not provided, the function finds the highest point automatically.
 
     % Calculate the diagonal length of the mesh grid
     diagonal_length = sqrt((xMesh_crop(1,1) - xMesh_crop(1,end))^2 + (yMesh_crop(1,1) - yMesh_crop(end,1))^2);
     
-    % Find the apex (highest point) in the mesh grid
-    [~, iApex] = max(zMesh_crop(:));
-    xApex = xMesh_crop(iApex);
-    yApex = yMesh_crop(iApex);
+    % --- MODIFICATION START ---
+    % Check if xApex and yApex are provided (total inputs should be 6)
+    % If fewer than 6 inputs, we calculate them automatically (Backward Compatibility)
+    if nargin < 6
+        [~, iApex] = max(zMesh_crop(:));
+        xApex = xMesh_crop(iApex);
+        yApex = yMesh_crop(iApex);
+    end
+    % --- MODIFICATION END ---
     
     % Create a wall mesh with boundary values set to a high value
     wallMesh = zeros(size(zMesh_crop));
@@ -16,8 +24,9 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
     zApex_s = diagonal_length * 10;
     
     % writeGeoTiff(wallMesh, 'zWall.tif', 3826, min(xMesh_crop(:)), max(xMesh_crop(:)), min(yMesh_crop(:)), max(yMesh_crop(:)), 'north', 'west')
-
+    
     % Compute the shortest path topography
+    % (Uses either the passed Apex or the calculated Apex from above)
     [sTopo, ~, ~, ~, ~, ~] = FanTopo(xMesh_crop, yMesh_crop, wallMesh, xApex, yApex, zApex_s, 'tanAlphaM', 1);
     
     % Calculate the shortest path distance map
@@ -29,6 +38,7 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
         pcolor(xMesh_crop, yMesh_crop, wallMesh)
         shading flat
         axis equal
+        
         figure
         imagesc(xMesh_crop(1,:), yMesh_crop(:,1), sMap)
         hold on
@@ -43,5 +53,4 @@ function sMap = shortest_path_distance_within_boundary(xMesh_crop, yMesh_crop, z
         xlabel('Easting (m)')
         ylabel('Northing (m)')
     end
-
 end
